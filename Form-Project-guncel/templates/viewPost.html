@@ -8,13 +8,13 @@
     <p>{{.Post.Content}}</p>
     <small>Posted on {{.Post.CreatedAt}}</small>
 
-    <p>Likes: {{.Post.LikeCount}} Disslike: {{.Post.DislikeCount}}</p>
+    <p>Likes: {{.Post.LikeCount}} Dislikes: {{.Post.DislikeCount}}</p>
 
     <form action="/like" method="post" style="display:inline;">
         <input type="hidden" name="post_id" value="{{.Post.ID}}">
         <button type="submit">Like</button>
     </form>
-    <form action="/dislike" method="post" style="display:inline;">
+    <form action="/Dislike" method="post" style="display:inline;">
         <input type="hidden" name="post_id" value="{{.Post.ID}}">
         <button type="submit">Dislike</button>
     </form>
@@ -25,12 +25,12 @@
             <li>
                 <p>{{.Content}}</p>
                 <small>Commented on {{.CreatedAt}}</small>
-                <p>Likes: {{.LikeCount}} Disslike: {{.DislikeCount}}</p>
+                <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
                 <form action="/like" method="post" style="display:inline;">
                     <input type="hidden" name="comment_id" value="{{.ID}}">
                     <button type="submit">Like</button>
                 </form>
-                <form action="/dislike" method="post" style="display:inline;">
+                <form action="/Dislike" method="post" style="display:inline;">
                     <input type="hidden" name="comment_id" value="{{.ID}}">
                     <button type="submit">Dislike</button>
                 </form>

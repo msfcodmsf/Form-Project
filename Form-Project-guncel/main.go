@@ -24,24 +24,24 @@ type User struct {
 }
 
 type Post struct {
-	ID            int
-	UserID        int
-	Title         string
-	Content       string
-	Categories    []string
-	CreatedAt     time.Time
-	LikeCount     int
-	disslikeCount int
+	ID           int
+	UserID       int
+	Title        string
+	Content      string
+	Categories   []string
+	CreatedAt    time.Time
+	LikeCount    int
+	DislikeCount int
 }
 
 type Comment struct {
-	ID            int
-	PostID        int
-	UserID        int
-	Content       string
-	CreatedAt     time.Time
-	LikeCount     int
-	disslikeCount int
+	ID           int
+	PostID       int
+	UserID       int
+	Content      string
+	CreatedAt    time.Time
+	LikeCount    int
+	DislikeCount int
 }
 
 type Like struct {
@@ -74,7 +74,7 @@ func main() {
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
 	http.HandleFunc("/like", likeHandler)
-	http.HandleFunc("/disslike", disslikeHandler)
+	http.HandleFunc("/Dislike", DislikeHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 
@@ -111,7 +111,7 @@ func createTables() {
             post_id INTEGER,
             comment_id INTEGER
         );`,
-		`CREATE TABLE IF NOT EXISTS disslikes (
+		`CREATE TABLE IF NOT EXISTS Dislikes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             post_id INTEGER,
@@ -133,16 +133,11 @@ func createTables() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	query := `
-		SELECT p.id, p.user_id, p.title, p.content, p.created_at,
-		       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-		       (SELECT COUNT(*) FROM disslikes WHERE post_id = p.id) as disslike_count
-		FROM posts p
-		ORDER BY p.created_at DESC`
-
-	rows, err := db.Query(query)
+	rows, err := db.Query(`SELECT id, user_id, title, content, created_at,
+						   (SELECT COUNT(*) FROM likes WHERE post_id = posts.id) AS like_count,
+						   (SELECT COUNT(*) FROM Dislikes WHERE post_id = posts.id) AS Dislike_count
+						   FROM posts ORDER BY created_at DESC`)
 	if err != nil {
-		log.Println("Error querying posts:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -151,8 +146,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &post.LikeCount, &post.disslikeCount); err != nil {
-			log.Println("Error scanning post:", err)
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &post.LikeCount, &post.DislikeCount); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -161,7 +155,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles("templates/home.html")
 	if err != nil {
-		log.Println("Error parsing template:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -174,7 +167,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		log.Println("Error executing template:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -348,7 +340,7 @@ func likeHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
-func disslikeHandler(w http.ResponseWriter, r *http.Request) {
+func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -359,9 +351,9 @@ func disslikeHandler(w http.ResponseWriter, r *http.Request) {
 	commentID := r.FormValue("comment_id")
 
 	if postID != "" {
-		_, err = db.Exec("INSERT INTO disslikes (user_id, post_id) VALUES (?, ?)", session.UserID, postID)
+		_, err = db.Exec("INSERT INTO Dislikes (user_id, post_id) VALUES (?, ?)", session.UserID, postID)
 	} else if commentID != "" {
-		_, err = db.Exec("INSERT INTO disslikes (user_id, comment_id) VALUES (?, ?)", session.UserID, commentID)
+		_, err = db.Exec("INSERT INTO Dislikes (user_id, comment_id) VALUES (?, ?)", session.UserID, commentID)
 	}
 
 	if err != nil {
@@ -425,30 +417,21 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var post Post
 	var categories string
-	query := `
-		SELECT p.id, p.user_id, p.title, p.content, p.categories, p.created_at,
-		       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-		       (SELECT COUNT(*) FROM disslikes WHERE post_id = p.id) as disslike_count
-		FROM posts p
-		WHERE p.id = ?`
-
-	err := db.QueryRow(query, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt, &post.LikeCount, &post.disslikeCount)
+	err := db.QueryRow(`SELECT id, user_id, title, content, categories, created_at,
+						(SELECT COUNT(*) FROM likes WHERE post_id = posts.id) AS like_count,
+						(SELECT COUNT(*) FROM Dislikes WHERE post_id = posts.id) AS Dislike_count
+						FROM posts WHERE id = ?`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt, &post.LikeCount, &post.DislikeCount)
 	if err != nil {
-		log.Println("Error querying post:", err)
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
 	json.Unmarshal([]byte(categories), &post.Categories)
 
-	commentQuery := `
-		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at,
-		       (SELECT COUNT(*) FROM likes WHERE comment_id = c.id) as like_count,
-		       (SELECT COUNT(*) FROM disslikes WHERE comment_id = c.id) as disslike_count
-		FROM comments c
-		WHERE c.post_id = ?`
-	rows, err := db.Query(commentQuery, postID)
+	rows, err := db.Query(`SELECT id, post_id, user_id, content, created_at,
+							(SELECT COUNT(*) FROM likes WHERE comment_id = comments.id) AS like_count,
+							(SELECT COUNT(*) FROM Dislikes WHERE comment_id = comments.id) AS Dislike_count
+							FROM comments WHERE post_id = ?`, postID)
 	if err != nil {
-		log.Println("Error querying comments:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -457,8 +440,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	var comments []Comment
 	for rows.Next() {
 		var comment Comment
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.LikeCount, &comment.disslikeCount); err != nil {
-			log.Println("Error scanning comment:", err)
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.LikeCount, &comment.DislikeCount); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -475,11 +457,9 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles("templates/viewPost.html")
 	if err != nil {
-		log.Println("Error parsing template:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 	err = tmpl.Execute(w, data)
 	if err != nil {
 		log.Println("Error executing template:", err)
