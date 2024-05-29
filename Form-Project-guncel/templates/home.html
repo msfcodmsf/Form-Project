@@ -19,7 +19,8 @@
             <li>
                 <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3>
                 <p>{{.Content}}</p>
-                <small>Posted on {{.CreatedAtFormatted}}</small>
+                <small>Posted by {{.Username}} on {{.CreatedAtFormatted}}</small>
+                <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
             </li>
         {{end}}
     </ul>

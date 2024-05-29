@@ -6,16 +6,18 @@
 <body>
     <h1>{{.Post.Title}}</h1>
     <p>{{.Post.Content}}</p>
-    <small>Posted on {{.Post.CreatedAtFormatted}}</small>
+    <small>Posted by {{.Post.Username}} on {{.Post.CreatedAtFormatted}}</small>
 
     <p>Likes: {{.Post.LikeCount}} Dislikes: {{.Post.DislikeCount}}</p>
 
-    <form action="/like" method="post" style="display:inline;">
+    <form action="/vote" method="post" style="display:inline;">
         <input type="hidden" name="post_id" value="{{.Post.ID}}">
+        <input type="hidden" name="vote_type" value="1">
         <button type="submit">Like</button>
     </form>
-    <form action="/Dislike" method="post" style="display:inline;">
+    <form action="/vote" method="post" style="display:inline;">
         <input type="hidden" name="post_id" value="{{.Post.ID}}">
+        <input type="hidden" name="vote_type" value="-1">
         <button type="submit">Dislike</button>
     </form>
 
@@ -24,14 +26,16 @@
         {{range .Comments}}
             <li>
                 <p>{{.Content}}</p>
-                <small>Commented on {{.CreatedAtFormatted}}</small>
+                <small>Commented by {{.Username}} on {{.CreatedAtFormatted}}</small>
                 <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
-                <form action="/like" method="post" style="display:inline;">
+                <form action="/vote" method="post" style="display:inline;">
                     <input type="hidden" name="comment_id" value="{{.ID}}">
+                    <input type="hidden" name="vote_type" value="1">
                     <button type="submit">Like</button>
                 </form>
-                <form action="/Dislike" method="post" style="display:inline;">
+                <form action="/vote" method="post" style="display:inline;">
                     <input type="hidden" name="comment_id" value="{{.ID}}">
+                    <input type="hidden" name="vote_type" value="-1">
                     <button type="submit">Dislike</button>
                 </form>
             </li>

@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ type Post struct {
 	CreatedAtFormatted string
 	LikeCount          int
 	DislikeCount       int
+	Username           string
 }
 
 type Comment struct {
@@ -44,6 +46,7 @@ type Comment struct {
 	CreatedAtFormatted string
 	LikeCount          int
 	DislikeCount       int
+	Username           string // Kullanıcı adı
 }
 
 type Like struct {
@@ -75,8 +78,9 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
-	http.HandleFunc("/like", likeHandler)
-	http.HandleFunc("/Dislike", DislikeHandler)
+	http.HandleFunc("/likeHandler", likeHandler)
+	http.HandleFunc("/DislikeHandler", DislikeHandler)
+	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 
@@ -124,6 +128,13 @@ func createTables() {
             user_id INTEGER,
             expiry TIMESTAMP
         );`,
+		`CREATE TABLE IF NOT EXISTS votes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER,
+			post_id INTEGER,
+			comment_id INTEGER,
+			vote_type INTEGER CHECK(vote_type IN (1, -1))
+		);`,
 	}
 
 	for _, query := range queries {
@@ -135,12 +146,18 @@ func createTables() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := getSession(r) // Kullanıcı oturumunu kontrol ediyoruz
+	session, _ := getSession(r)
 
-	rows, err := db.Query(`SELECT id, user_id, title, content, created_at,
-						   (SELECT COUNT(*) FROM likes WHERE post_id = posts.id) AS like_count,
-						   (SELECT COUNT(*) FROM Dislikes WHERE post_id = posts.id) AS Dislike_count
-						   FROM posts ORDER BY created_at DESC`)
+	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.created_at, users.username,
+				COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+				COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+				FROM posts
+				JOIN users ON posts.user_id = users.id
+				LEFT JOIN votes ON votes.post_id = posts.id
+				GROUP BY posts.id
+				ORDER BY posts.created_at DESC`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -150,11 +167,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &post.LikeCount, &post.DislikeCount); err != nil {
+		var username string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &username, &post.LikeCount, &post.DislikeCount); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		post.Username = username
 		posts = append(posts, post)
 	}
 
@@ -169,7 +188,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		LoggedIn bool
 	}{
 		Posts:    posts,
-		LoggedIn: session != nil, // Kullanıcı oturum açmış mı kontrol ediyoruz
+		LoggedIn: session != nil,
 	}
 
 	err = tmpl.Execute(w, data)
@@ -372,6 +391,76 @@ func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
+func voteHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.FormValue("post_id")
+	commentID := r.FormValue("comment_id")
+	voteTypeStr := r.FormValue("vote_type")
+
+	// Convert voteType from string to integer
+	voteType, err := strconv.Atoi(voteTypeStr)
+	if err != nil || (voteType != 1 && voteType != -1) {
+		http.Error(w, "Invalid vote type", http.StatusBadRequest)
+		return
+	}
+
+	var existingVoteType sql.NullInt64
+	var query string
+
+	if postID != "" {
+		query = "SELECT vote_type FROM votes WHERE user_id = ? AND post_id = ?"
+		err = db.QueryRow(query, session.UserID, postID).Scan(&existingVoteType)
+	} else if commentID != "" {
+		query = "SELECT vote_type FROM votes WHERE user_id = ? AND comment_id = ?"
+		err = db.QueryRow(query, session.UserID, commentID).Scan(&existingVoteType)
+	}
+
+	if err != nil && err != sql.ErrNoRows {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if existingVoteType.Valid {
+		if existingVoteType.Int64 == int64(voteType) {
+			if postID != "" {
+				query = "DELETE FROM votes WHERE user_id = ? AND post_id = ?"
+				_, err = db.Exec(query, session.UserID, postID)
+			} else if commentID != "" {
+				query = "DELETE FROM votes WHERE user_id = ? AND comment_id = ?"
+				_, err = db.Exec(query, session.UserID, commentID)
+			}
+		} else {
+			if postID != "" {
+				query = "UPDATE votes SET vote_type = ? WHERE user_id = ? AND post_id = ?"
+				_, err = db.Exec(query, voteType, session.UserID, postID)
+			} else if commentID != "" {
+				query = "UPDATE votes SET vote_type = ? WHERE user_id = ? AND comment_id = ?"
+				_, err = db.Exec(query, voteType, session.UserID, commentID)
+			}
+		}
+	} else {
+		if postID != "" {
+			query = "INSERT INTO votes (user_id, post_id, vote_type) VALUES (?, ?, ?)"
+			_, err = db.Exec(query, session.UserID, postID, voteType)
+		} else if commentID != "" {
+			query = "INSERT INTO votes (user_id, comment_id, vote_type) VALUES (?, ?, ?)"
+			_, err = db.Exec(query, session.UserID, commentID, voteType)
+		}
+	}
+
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
 func filterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -424,10 +513,14 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var post Post
 	var categories string
-	err := db.QueryRow(`SELECT id, user_id, title, content, categories, created_at,
-						(SELECT COUNT(*) FROM likes WHERE post_id = posts.id) AS like_count,
-						(SELECT COUNT(*) FROM Dislikes WHERE post_id = posts.id) AS Dislike_count
-						FROM posts WHERE id = ?`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt, &post.LikeCount, &post.DislikeCount)
+	err := db.QueryRow(`SELECT posts.id, posts.user_id, posts.title, posts.content, posts.created_at, users.username,
+						COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+						COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+						FROM posts
+						JOIN users ON posts.user_id = users.id
+						LEFT JOIN votes ON votes.post_id = posts.id
+						WHERE posts.id = ?
+						GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
@@ -435,10 +528,14 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal([]byte(categories), &post.Categories)
 	post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
 
-	rows, err := db.Query(`SELECT id, post_id, user_id, content, created_at,
-							(SELECT COUNT(*) FROM likes WHERE comment_id = comments.id) AS like_count,
-							(SELECT COUNT(*) FROM Dislikes WHERE comment_id = comments.id) AS Dislike_count
-							FROM comments WHERE post_id = ?`, postID)
+	rows, err := db.Query(`SELECT comments.id, comments.post_id, comments.user_id, comments.content, comments.created_at, users.username,
+							COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+							COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+							FROM comments
+							JOIN users ON comments.user_id = users.id
+							LEFT JOIN votes ON votes.comment_id = comments.id
+							WHERE comments.post_id = ?
+							GROUP BY comments.id`, postID)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -448,7 +545,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	var comments []Comment
 	for rows.Next() {
 		var comment Comment
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.LikeCount, &comment.DislikeCount); err != nil {
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.Username, &comment.LikeCount, &comment.DislikeCount); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
