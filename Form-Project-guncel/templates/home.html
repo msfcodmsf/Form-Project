@@ -6,8 +6,12 @@
 <body>
     <h1>Welcome to the Forum</h1>
     <nav>
-        <a href="/login">Log In</a> | 
-        <a href="/register">Register</a>
+        {{if .LoggedIn}}
+            <a href="/logout">Log Out</a>
+        {{else}}
+            <a href="/login">Log In</a> | 
+            <a href="/register">Register</a>
+        {{end}}
     </nav>
     <h2>Posts</h2>
     <ul>
@@ -19,6 +23,10 @@
             </li>
         {{end}}
     </ul>
-    <a href="/createPost">Create a new post</a>
+    {{if .LoggedIn}}
+        <a href="/createPost">Create a new post</a>
+    {{else}}
+        <p><a href="/login">Log in</a> to create a new post.</p>
+    {{end}}
 </body>
 </html>

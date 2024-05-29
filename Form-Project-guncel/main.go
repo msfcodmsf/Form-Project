@@ -135,6 +135,8 @@ func createTables() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := getSession(r) // Kullanıcı oturumunu kontrol ediyoruz
+
 	rows, err := db.Query(`SELECT id, user_id, title, content, created_at,
 						   (SELECT COUNT(*) FROM likes WHERE post_id = posts.id) AS like_count,
 						   (SELECT COUNT(*) FROM Dislikes WHERE post_id = posts.id) AS Dislike_count
@@ -163,9 +165,11 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Posts []Post
+		Posts    []Post
+		LoggedIn bool
 	}{
-		Posts: posts,
+		Posts:    posts,
+		LoggedIn: session != nil, // Kullanıcı oturum açmış mı kontrol ediyoruz
 	}
 
 	err = tmpl.Execute(w, data)
