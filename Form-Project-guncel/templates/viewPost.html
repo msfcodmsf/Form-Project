@@ -6,7 +6,7 @@
 <body>
     <h1>{{.Post.Title}}</h1>
     <p>{{.Post.Content}}</p>
-    <small>Posted on {{.Post.CreatedAt}}</small>
+    <small>Posted on {{.Post.CreatedAtFormatted}}</small>
 
     <p>Likes: {{.Post.LikeCount}} Dislikes: {{.Post.DislikeCount}}</p>
 
@@ -24,7 +24,7 @@
         {{range .Comments}}
             <li>
                 <p>{{.Content}}</p>
-                <small>Commented on {{.CreatedAt}}</small>
+                <small>Commented on {{.CreatedAtFormatted}}</small>
                 <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
                 <form action="/like" method="post" style="display:inline;">
                     <input type="hidden" name="comment_id" value="{{.ID}}">

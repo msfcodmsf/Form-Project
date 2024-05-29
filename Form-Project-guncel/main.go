@@ -24,24 +24,26 @@ type User struct {
 }
 
 type Post struct {
-	ID           int
-	UserID       int
-	Title        string
-	Content      string
-	Categories   []string
-	CreatedAt    time.Time
-	LikeCount    int
-	DislikeCount int
+	ID                 int
+	UserID             int
+	Title              string
+	Content            string
+	Categories         []string
+	CreatedAt          time.Time
+	CreatedAtFormatted string
+	LikeCount          int
+	DislikeCount       int
 }
 
 type Comment struct {
-	ID           int
-	PostID       int
-	UserID       int
-	Content      string
-	CreatedAt    time.Time
-	LikeCount    int
-	DislikeCount int
+	ID                 int
+	PostID             int
+	UserID             int
+	Content            string
+	CreatedAt          time.Time
+	CreatedAtFormatted string
+	LikeCount          int
+	DislikeCount       int
 }
 
 type Like struct {
@@ -150,6 +152,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
 		posts = append(posts, post)
 	}
 
@@ -426,6 +429,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.Unmarshal([]byte(categories), &post.Categories)
+	post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
 
 	rows, err := db.Query(`SELECT id, post_id, user_id, content, created_at,
 							(SELECT COUNT(*) FROM likes WHERE comment_id = comments.id) AS like_count,
@@ -444,6 +448,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		comment.CreatedAtFormatted = comment.CreatedAt.Format("2006-01-02 15:04")
 		comments = append(comments, comment)
 	}
 
