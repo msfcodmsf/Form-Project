@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<<<<<<< HEAD
+    <title>Software News</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <link rel="stylesheet" type="text/css" href="/Form-Project-guncel/static/style.css">
+=======
+    <title>Home Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            background-color: #3498db;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        nav {
+            text-align: center;
+            padding: 10px;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #3498db;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: white;
+            margin: 10px auto;
+            padding: 20px;
+            width: 60%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        li h3 {
+            margin: 0;
+        }
+        li p {
+            color: #666;
+        }
+        li small {
+            display: block;
+            margin: 10px 0;
+            color: #999;
+        }
+        a.button {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            text-align: center;
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        a.button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+>>>>>>> b50bea97dddd8a16ba1a3d4f26bc596a6b8ce548
+</head>
+<body>
+    <div id="bar">
+        <nav>
+            {{if .LoggedIn}}
+                <a href="/logout">Log Out</a>
+            {{else}}
+                <a href="/login">Log In</a> | 
+                <a href="/register">Register</a>
+            {{end}}
+        </nav>
+        <span class="theme-mode"></span>
+    </div>
+    <div id="left"></div>
+    <div id="center"></div>
+    
+    <h2>Posts</h2>
+    <ul>
+        {{range .Posts}}
+            <li>
+                <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3>
+                <p>{{.Content}}</p>
+                <small>Posted by {{.Username}} on {{.CreatedAtFormatted}}</small>
+                <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
+            </li>
+        {{end}}
+    </ul>
+    {{if .LoggedIn}}
+        <a href="/createPost" class="button">Create a new post</a>
+    {{else}}
+        <p><a href="/login">Log in</a> to create a new post.</p>
+    {{end}}
+</body>
+</html>

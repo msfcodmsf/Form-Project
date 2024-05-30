@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
@@ -79,7 +78,7 @@ func main() {
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
 	http.HandleFunc("/likeHandler", likeHandler)
-	http.HandleFunc("/DislikeHandler", DislikeHandler)
+	http.HandleFunc("/DislikeHandler", dislikeHandler)
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
@@ -377,7 +376,7 @@ func likeHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
-func DislikeHandler(w http.ResponseWriter, r *http.Request) {
+func dislikeHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
