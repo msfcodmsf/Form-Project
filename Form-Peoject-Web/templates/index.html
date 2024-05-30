@@ -7,135 +7,62 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
 </head>
 <body>
-    <div id="düzenbar">
+<div id="düzenbar">
     <div id="bar">
-        <img id="logo" src="/templates/png/logo.png">
-        <ul>
-            <li><a href="/templates/index.html">Anasayfa</a></li>
-            <li><a href="/templates/gündem.html">Gündem</a></li>
-            <li class="menu"><a href="/templates/sosyal.html" >Sosyal</a>
-              <div class="acilir-menu">
-                <a href="/templates/bekleyensorular.html">Cevap Bekleyen Sorular</a>
-                <a href="#">Link 2</a>
-                <a href="#">Link 3</a>
-              </div>
-            </li>
-            <li><a href="sss.html">SSS</a></li>
-          </ul>
-        <span class="theme-mode"></span>
+        <img id="logo" src="/templates/logo.png">
+        <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
+        <div id="darkmod">
+        <span class="theme-mode">
+            <span class="theme-mode">
+                <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
+                  <i id="themeIcon" class="fas fa-sun"></i></a> 
+              </span>
+        </span>
+    </div>
+        <div id="girişbar">
+            <nav>
+                {{if .LoggedIn}}
+                    <a href="/logout" class="button">Log Out</a>
+                {{else}}
+                    <a href="/login" class="button">Log In</a>
+                    <a href="/register" class="button">Register</a>
+                {{end}}
+            </nav>
+        </div>
     </div>
 </div>
-    <div id="left">
-        <div id="cont">
-            <h1>Filtre</h1>
-            <form>
-                <h2>İstediğin dili seç</h2>
-                <input type="text" id="searchBox" placeholder="Dil ara..." onkeyup="searchLanguages()">
 
-                <div id="filter1">
-                    <div id="resultsContainer"></div>
-                </div>
-                <div id="filtre1"></div>
-                    <h2>Zamanı sınırla</h2>
-                    <input type="checkbox" id="age1" name="age" value="Yeni">
-                    <label for="age1">Yeni</label><br>
-                    <input type="checkbox" id="age2" name="age" value="En çok beğeni alan">
-                    <label for="age2">En çok beğeni alan</label><br>  
-                    <input type="checkbox" id="age3" name="age" value="100">
-                    <label for="age3">Çözülmemiş</label><br><br>
-                    <input id="onaylaButton" type="submit" value="Değişiklikleri Uygula">
-                    <button id="clearButton">Temizle</button>
-            </form>
-        </div>
-    </div>
+    <div id="left"></div>
     <div id="center">
-        <div id="centerolustur">
-            <div a id="centerolusturbutton">
-                <a href="/templates/formolustur.html">
-                    <img src="/templates/png/write.png" width="25%" height="80%">Forum Oluştur</img>
-                </a>
-            </div>
-            <div id="centerolusturbutton">
-                <a href="/templates/formolustur.html">
-                    <img src="/templates/png/yeni_formlar.png" width="25%" height="80%">Yeni Forumlar</img>
-                </a>
-            </div>
-            <div id="centerolusturbutton"></div>
-            <div id="centerolusturbutton"></div>
-            <div id="centerolusturbutton"></div>
-        </div>
-        <div id="centercont">
-           <div id="centerprofilcont">
-            <div id="profil"></div>
-           </div>
-           <div id="centersorubaslik"></div>
-           <div id="centersorukatagori">katagori</div>
-        </div>
-
-        <div id="centercont">
-           <div id="centerprofilcont">
-            <div id="profil"></div>
-           </div>
-           <div id="centersorubaslik"></div>
-           <div id="centersorukatagori">katagori</div>
-        </div>
-
-        <div id="centercont">
-           <div id="centerprofilcont">
-            <div id="profil"></div>
-           </div>
-           <div id="centersorubaslik"></div>
-           <div id="centersorukatagori">katagori</div>
-        </div>
-
-        <div id="centercont">
-           <div id="centerprofilcont">
-            <div id="profil"></div>
-           </div>
-           <div id="centersorubaslik"></div>
-           <div id="centersorukatagori">katagori</div>
-        </div>
-
+        {{range .Posts}}
+    </ul>
         <div id="centercont">
             <div id="centerprofilcont">
-             <div id="profil"></div>
+                <h3>{{.Username}}</h3>
             </div>
-            <div id="centersorubaslik"></div>
-            <div id="centersorukatagori">katagori</div>
-         </div>
- 
-         <div id="centercont">
-            <div id="centerprofilcont">
-             <div id="profil"></div>
-            </div>
-            <div id="centersorubaslik"></div>
-            <div id="centersorukatagori">katagori</div>
-         </div>
- 
-         <div id="centercont">
-            <div id="centerprofilcont">
-             <div id="profil"></div>
-            </div>
-            <div id="centersorubaslik"></div>
-            <div id="centersorukatagori">katagori</div>
-         </div>
-
-         <div id="centercont">
-            <div id="centerprofilcont">
-             <div id="profil"></div>
-            </div>
-            <div id="centersorubaslik">soru linki</div>
-            <div id="centersorukatagori">katagori</div>
-         </div>
- 
-         <div id="centercont">
-            <div id="centerprofilcont">
-             <div id="profil"></div>
-            </div>
-            <div id="centersorubaslik">soru linki</div>
-            <div id="centersorukatagori">katagori</div>
-         </div>
+                <div id="centersorubaslik">
+                    <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3>
+               
+                <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
+                {{.CreatedAtFormatted}}
+                </div>
+                <div id="centersorukatagori">
+                    <p>{{.Content}}</p>
+                </div>
+       </div>
     </div>
+    {{end}}
+    <ul>
+        
+    {{if .LoggedIn}}
+        <a href="/createPost">Create a new post</a>
+    {{else}}
+        <p><a href="/login">Log in</a> to create a new post.</p>
+    {{end}}
+
+    </div>
+    
+    
     <script src="/static/scripts.js"></script>
 </body>
 </html>
