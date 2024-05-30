@@ -1,32 +1,31 @@
-# Use the official Golang image to create a build artifact.
-# This is a two-stage build.
-FROM golang:1.16 AS build
+# Build aşaması
+FROM golang:1.22.3-alpine AS builder
 
-# Set the Current Working Directory inside the container
+# Çalışma dizinini ayarla
 WORKDIR /app
 
-# Copy the source from the current directory to the Working Directory inside the container
+# Gerekli paketleri yükle
+RUN apk update && apk add --no-cache sqlite sqlite-dev gcc musl-dev
+
+# Uygulama kaynak kodunu kopyala
 COPY . .
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
-
-# Build the Go app
+# CGO'yu etkinleştir ve Go uygulamasını derle
+ENV CGO_ENABLED=1
 RUN go build -o main .
 
-# Start a new stage from scratch
-FROM alpine:latest  
+# Çalışma aşaması
+FROM alpine:latest
 
-# Set the Current Working Directory inside the container
-WORKDIR /root/
+# Gerekli paketleri yükle (libc6-compat, libgcc ve libstdc++ gibi)
+RUN apk update && apk add --no-cache sqlite-libs libc6-compat
 
-# Copy the Pre-built binary file from the previous stage
-COPY --from=build /app/main .
-COPY --from=build /app/templates ./templates
-COPY --from=build /app/forum.db .
+# Çalışma dizinini ayarla
+WORKDIR /app
 
-# Expose port 8080 to the outside world
-EXPOSE 8080
+# Derlenmiş binary'yi ve diğer gerekli dosyaları kopyala
+COPY --from=builder /app/main .
+COPY --from=builder /app/templates /app/templates
 
-# Command to run the executable
-CMD ["./main"]
+# Varsayılan komutu ayarla
+CMD ["/app/main"]
