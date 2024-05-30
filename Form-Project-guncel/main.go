@@ -231,6 +231,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		var user User
 		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Password)
 		if err != nil {
+			// Avoid specifying which part of the login was incorrect for security reasons
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
@@ -250,17 +251,27 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Set session cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:    "session_id",
 			Value:   sessionID,
 			Expires: expiry,
+			// Optionally add security flags like HttpOnly and Secure
+			HttpOnly: true, // This makes the cookie inaccessible to JavaScript
+			Secure:   true, // This ensures the cookie is sent over HTTPS only
 		})
 
+		// Redirect to the home page after successful login
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	tmpl, _ := template.ParseFiles("templates/login.html")
+	// Render login template
+	tmpl, err := template.ParseFiles("templates/login.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	tmpl.Execute(w, nil)
 }
 
@@ -467,13 +478,40 @@ func filterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve session cookie
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sessionID := cookie.Value
+
+	// Retrieve session from database
+	var userID int
+	err = db.QueryRow("SELECT user_id FROM sessions WHERE id = ?", sessionID).Scan(&userID)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	category := r.URL.Query().Get("category")
-	query := "SELECT id, user_id, title, content, categories, created_at FROM posts"
+	created := r.URL.Query().Get("created")
+	liked := r.URL.Query().Get("liked")
+	query := "SELECT id, user_id, title, content, categories, created_at FROM posts WHERE 1=1"
 	args := []interface{}{}
 
 	if category != "" {
-		query += " WHERE categories LIKE ?"
+		query += " AND categories LIKE ?"
 		args = append(args, "%"+category+"%")
+	}
+	if created != "" {
+		query += " AND user_id = ?"
+		args = append(args, userID)
+	}
+	if liked != "" {
+		query += " AND id IN (SELECT post_id FROM likes WHERE user_id = ?)"
+		args = append(args, userID)
 	}
 
 	rows, err := db.Query(query, args...)
@@ -495,7 +533,11 @@ func filterHandler(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, post)
 	}
 
-	tmpl, _ := template.ParseFiles("templates/filter.html")
+	tmpl, err := template.ParseFiles("templates/filter.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	tmpl.Execute(w, posts)
 }
 
