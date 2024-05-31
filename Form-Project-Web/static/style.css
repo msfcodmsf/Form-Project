@@ -7,7 +7,6 @@ html, body {
 #banner {
     width: 100%;
     height: 25%;
-    background-color: #8edc35;
 }
 
 body.light-mode #banner {
@@ -33,7 +32,7 @@ body.light-mode #banner {
 }
 
 #girişbar {
-    width: 17%;
+    width: 25%;
     height: 100%;
     margin-left: 27%;
     padding-top: 5px;
@@ -96,8 +95,8 @@ body.light-mode #banner {
 #centerolustur {
     width: 100%;
     height: 5%;
-    background-color: red;
-    margin-bottom: 1%;
+    background-color: rgb(205, 164, 18);
+    border-radius: 10%;
 }
 
 #centerolusturbutton {
@@ -111,7 +110,7 @@ body.light-mode #banner {
 #centerprofilcont {
     width: 25%;
     height: 100%;
-    background-color: rgb(20, 25, 31);
+    background-color: white;
     float: left;
 }
 
@@ -127,14 +126,14 @@ body.light-mode #banner {
     width: 60%;
     height: 100%;
     float: left;
-    background-color: #dc3545;
+    background-color: white;
 }
 
 #centersorukatagori {
     width: 15%;
     height: 100%;
     float: left;
-    background-color: #c8a527;
+    background-color: white;
 }
 
 
@@ -182,12 +181,15 @@ li a:hover, .menu:hover { /*ÖNEMLİİİ*/
 }
 
 
-/* YENİ Gece modu */
-
 /* Gece modu */
 body.night-mode {
     background-color:rgb(20, 25, 31);
     color: rgb(255, 255, 255);
+}
+
+body.night-mode #centerprofilcont {
+    color: white;
+    background-color: rgb(20, 25, 31);
 }
 
 body.night-mode ul {
@@ -205,8 +207,9 @@ body.night-mode .button {
 body.night-mode #bar,
 body.night-mode #düzenbar,
 body.night-mode #girişbar,
+body.night-mode #centersorubaslik,
+body.night-mode #centersorukatagori,
 body.night-mode #left,
-
 body.night-mode #center {
   background-color: rgb(20, 25, 31);
   color: rgb(255, 255, 255);
@@ -223,8 +226,6 @@ body.light-mode #düzenbar {
     background-color: rgb(255, 255, 255);
     color: black;
 }
-
-
 
 body.light-mode ul {
     background-color: rgb(255, 255, 255);

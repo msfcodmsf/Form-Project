@@ -9,7 +9,7 @@
 <body>
 <div id="düzenbar">
     <div id="bar">
-        <img id="logo" src="/templates/logo.png">
+        <img id="logo" src="/static/logo.png">
         <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
         <div id="darkmod">
         <span class="theme-mode">
@@ -32,37 +32,33 @@
     </div>
 </div>
 
-    <div id="left"></div>
+    <div id="left">
+        <div id="centerolustur"></div>
+    </div>
+
     <div id="center">
-        {{range .Posts}}
-    </ul>
         <div id="centercont">
+            {{range .Posts}}
             <div id="centerprofilcont">
                 <h3>{{.Username}}</h3>
             </div>
                 <div id="centersorubaslik">
                     <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3>
-               
                 <p>Likes: {{.LikeCount}} Dislikes: {{.DislikeCount}}</p>
                 {{.CreatedAtFormatted}}
                 </div>
                 <div id="centersorukatagori">
                     <p>{{.Content}}</p>
-                </div>
-       </div>
+                </div>{{end}}
+       </div> 
     </div>
-    {{end}}
-    <ul>
-        
+   
     {{if .LoggedIn}}
         <a href="/createPost">Create a new post</a>
     {{else}}
         <p><a href="/login">Log in</a> to create a new post.</p>
     {{end}}
-
     </div>
-    
-    
     <script src="/static/scripts.js"></script>
 </body>
 </html>
