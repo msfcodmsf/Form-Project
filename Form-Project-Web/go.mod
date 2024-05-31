@@ -1,6 +1,6 @@
-module form-project
+module form-project-web
 
-go 1.23
+go 1.22.3
 
 require (
 	github.com/google/uuid v1.6.0
