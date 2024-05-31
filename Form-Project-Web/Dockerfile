@@ -2,6 +2,7 @@
 # This is a two-stage build.
 FROM golang:1.16 AS build
 
+RUN apk add --no-cache git sqlite
 # Set the Current Working Directory inside the container
 WORKDIR /app
 

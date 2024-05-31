@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
@@ -73,7 +74,7 @@ func main() {
 	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, r.URL.Path[1:])
 	})
-	
+
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
@@ -86,8 +87,8 @@ func main() {
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 
-	log.Println("Server started at :8065")
-	http.ListenAndServe(":8065", nil)
+	log.Println("Server started at :8080")
+	http.ListenAndServe(":8080", nil)
 }
 
 func createTables() {
@@ -233,6 +234,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		var user User
 		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Password)
 		if err != nil {
+			// Avoid specifying which part of the login was incorrect for security reasons
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
@@ -252,17 +254,27 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Set session cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:    "session_id",
 			Value:   sessionID,
 			Expires: expiry,
+			// Optionally add security flags like HttpOnly and Secure
+			HttpOnly: true, // This makes the cookie inaccessible to JavaScript
+			Secure:   true, // This ensures the cookie is sent over HTTPS only
 		})
 
+		// Redirect to the home page after successful login
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	tmpl, _ := template.ParseFiles("templates/login.html")
+	// Render login template
+	tmpl, err := template.ParseFiles("templates/login.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	tmpl.Execute(w, nil)
 }
 
@@ -321,29 +333,6 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
-func createCommentHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := getSession(r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	if r.Method == http.MethodPost {
-		postID := r.FormValue("post_id")
-		content := r.FormValue("content")
-
-		_, err := db.Exec("INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
-			postID, session.UserID, content, time.Now())
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%s", postID), http.StatusSeeOther)
-		return
-	}
-}
-
 func likeHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
 	if err != nil {
@@ -365,7 +354,32 @@ func likeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Use PRG pattern
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func createCommentHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		postID := r.FormValue("post_id")
+		content := r.FormValue("content")
+
+		_, err := db.Exec("INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
+			postID, session.UserID, content, time.Now())
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// Use PRG pattern
+		http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%s", postID), http.StatusSeeOther)
+		return
+	}
 }
 
 func dislikeHandler(w http.ResponseWriter, r *http.Request) {
@@ -469,13 +483,40 @@ func filterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve session cookie
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sessionID := cookie.Value
+
+	// Retrieve session from database
+	var userID int
+	err = db.QueryRow("SELECT user_id FROM sessions WHERE id = ?", sessionID).Scan(&userID)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	category := r.URL.Query().Get("category")
-	query := "SELECT id, user_id, title, content, categories, created_at FROM posts"
+	created := r.URL.Query().Get("created")
+	liked := r.URL.Query().Get("liked")
+	query := "SELECT id, user_id, title, content, categories, created_at FROM posts WHERE 1=1"
 	args := []interface{}{}
 
 	if category != "" {
-		query += " WHERE categories LIKE ?"
+		query += " AND categories LIKE ?"
 		args = append(args, "%"+category+"%")
+	}
+	if created != "" {
+		query += " AND user_id = ?"
+		args = append(args, userID)
+	}
+	if liked != "" {
+		query += " AND id IN (SELECT post_id FROM likes WHERE user_id = ?)"
+		args = append(args, userID)
 	}
 
 	rows, err := db.Query(query, args...)
@@ -497,7 +538,11 @@ func filterHandler(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, post)
 	}
 
-	tmpl, _ := template.ParseFiles("templates/filter.html")
+	tmpl, err := template.ParseFiles("templates/filter.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	tmpl.Execute(w, posts)
 }
 
