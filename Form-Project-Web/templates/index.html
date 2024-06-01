@@ -32,6 +32,11 @@
     </div>
 </div>
 
+<div></div>
+<div></div>
+<div></div>
+<div></div>
+</div>
     <div id="left">
         <div id="centerolustur">
             {{if .LoggedIn}}
@@ -59,6 +64,12 @@
     </div>
 
     <div id="center">
+        <div id="filtrecont">
+            <div id="filtre">En Yeni</div>
+            <div id="filtre">Çözülmüş</div>
+            <div id="filtre"></div>
+            <div id="filtre"></div>
+        </div>
         <div id="centercont">
             {{range .Posts}}
             <div id="centerprofilcont">
@@ -73,7 +84,7 @@
                 </div>
                 <div id="centersorukatagori">
                     <p>KATAGORİ</p>
-                    <p>{{.Categories}}</p>
+                    <p>{{.Content}}</p>
                 </div>{{end}}
        </div> 
     </div>
