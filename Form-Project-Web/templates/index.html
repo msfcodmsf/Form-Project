@@ -8,7 +8,6 @@
 </head>
 <body>
  
-</script>
 <div id="düzenbar">
     <div id="bar">
         <img id="logo" src="/static/png/logo.png">
@@ -32,11 +31,10 @@
     </div>
 </div>
 <div id="görünmezbar"></div>
-</div>
     <div id="left">
         <div id="centerolustur">
             {{if .LoggedIn}}
-            <a href="/createPost" style="text-decoration: none; color: white;">Create a new post</a>
+            <a href="javascript:void(0);" onclick="openModal('createPostModal')" style="text-decoration: none; color: white;">Create a new post</a>
         {{else}}
             <a href="javascript:void(0);" onclick="openModal('loginModal')" style="text-decoration: none; color: white;">Create a new post</a>
         {{end}}
@@ -96,7 +94,8 @@
                 </div>{{end}}
        </div> 
     </div>
-   
+    <span class="close" onclick="closeModal('loginModal')">&times;</span>
+
     <div id="loginModal" class="modal">
         <div class="modal-content">
           <span class="close" onclick="closeModal('loginModal')">&times;</span>
@@ -127,9 +126,6 @@
         </div>
       </div>
 
-      
-    
-
     <div id="logoutModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('logoutModal')">&times;</span>
@@ -140,43 +136,92 @@
         </div>
     </div>
 
+    <div id="createPostModal" class="modal">
+        <div class="modal-content create-post-content">
+            <span class="close" onclick="closeModal('createPostModal')">&times;</span>
+            <h1>Create Post</h1>
+            <form action="/createPost" method="post">
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" required><br><br>
+                <label for="content">Content:</label>
+                <textarea id="content" name="content" required></textarea><br><br>
+                <label for="categories">Categories:</label>
+                <input type="text" id="categories" name="categories" required><br><br>
+                <button type="submit">Create Post</button>
+            </form>
+        </div>
+    </div>
+    
+
    <script src="/static/akankod.js"></script>
     
     <script>
-// Modal açma fonksiyonu
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = "block";
-}
+function addModalEventListeners() {
+    // Login butonuna event listener ekle
+    var loginBtn = document.querySelector('a[href="/login"]');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('loginModal');
+        });
+    }
 
-// Modal kapatma fonksiyonu
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = "none";
-}
+    // Register butonuna event listener ekle
+    var registerBtn = document.querySelector('a[href="/register"]');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('registerModal');
+        });
+    }
 
-// Sayfa yüklendiğinde butonlara event listener ekle
-window.onload = function () {
-    document.querySelector('a[href="/login"]').addEventListener('click', function (event) {
-        event.preventDefault();
-        openModal('loginModal');
-    });
+    // Logout butonuna event listener ekle
+    var logoutBtn = document.querySelector('a[href="/logout"]');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('logoutModal');
+        });
+    }
 
-    document.querySelector('a[href="/register"]').addEventListener('click', function (event) {
-        event.preventDefault();
-        openModal('registerModal');
-    });
-
-    document.querySelector('a[href="/logout"]').addEventListener('click', function (event) {
-        event.preventDefault();
-        openModal('logoutModal');
-    });
-}
-
-// Modal dışında bir yere tıklandığında kapatma fonksiyonu
-window.onclick = function (event) {
-    if (event.target.classList.contains('modal')) {
-        closeModal(event.target.id);
+    // Create Post butonuna event listener ekle
+    var createPostBtn = document.querySelector('a[onclick="openModal(\'createPostModal\')"]');
+    if (createPostBtn) {
+        createPostBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('createPostModal');
+        });
     }
 }
+
+// Modal açma fonksiyonu
+function openModal(modalId) {
+  var modal = document.getElementById(modalId);
+  modal.style.display = 'block';
+  modal.querySelector('.modal-content').style.bottom = '10%'; // Slide up animation
+  modal.querySelector('.modal-content').style.opacity = '1';
+}
+
+function closeModal(modalId) {
+  var modal = document.getElementById(modalId);
+  modal.querySelector('.modal-content').style.bottom = '-100%'; // Slide down animation
+  modal.querySelector('.modal-content').style.opacity = '0';
+  setTimeout(function() {
+    modal.style.display = 'none';
+    addModalEventListeners(); 
+  }, 500); // Match transition duration
+}
+
+// Initial Setup
+window.onload = function () {
+  addModalEventListeners();
+};
+
+window.onclick = function (event) {
+  if (event.target.classList.contains('modal')) {
+    closeModal(event.target.id);
+  }
+};
     </script>   
     <script src="/static/scripts.js"></script>
 

@@ -405,32 +405,57 @@ body.light-mode #searchBox {
     left: 0;
     top: 0;
     width: 100%;
-    height: 100%;   
+    height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* Arkaplan rengi ve opaklık */
-  }
-  
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.5s ease; /* Görüntü geçişi için */
+}
+
 .modal-content {
-    color: #8edc35;
-    position: relative;
-    margin: 10% auto; /* Orta hizalama */
+    color: #000;
+    background-color: #fff;
+    margin: 0 auto;
     padding: 20px;
-    max-width: 400px; /* Maksimum genişlik */
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
     border-radius: 10px;
-    box-shadow: 0px 0px 10px 0px #000;
-    animation: slideDown 0.5s ease;
-  }
-  
+    position: fixed;
+    bottom: -100%; /* Başlangıçta görünmez */
+    left: 50%;
+    transform: translateX(-50%);
+    transition: bottom 0.5s ease, opacity 0.5s ease; /* Alt kısımdan yukarıya doğru geçiş ve opaklık geçişi */
+    opacity: 0; /* Başlangıçta görünmez */
+}
+
+.modal.show {
+    display: block;
+    opacity: 1; /* Görüntüyü göster */
+}
+
+.modal.show .modal-content {
+    bottom: 10%; /* Görünür konum */
+    opacity: 1; /* Görünürlük */
+}
+
+.create-post-content {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    margin: 0;
+}
+
+
   /* Login Başlığı */
   .modal-content h1 {
     text-align: center; /* Metni ortala */
     margin-top: 0; /* Üst boşluğu sıfırla */
     padding-top: 10px; /* Başlık üstündeki boşluk */
   }
-  
-  
-  /* Close Button */
-  .close {
+
+/* Close Button */
+.close {
     color: white;
     position: absolute;
     top: 10px;
@@ -438,23 +463,21 @@ body.light-mode #searchBox {
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
-  }
-  
-  /* Form Styling */
-  form {
+}
+
+/* Form Styling */
+form {
     display: flex;
     flex-direction: column;
     align-items: center; /* Form elemanlarını dikeyde hizalama */
     padding-top: 20px; /* Form üstündeki boşluk */
-  }
+}
   
-  
-  
-  label {
+label {
     font-size: 18px;
-  }
-
-  button {
+}
+  
+button {
     padding: 10px;
     font-size: 18px;
     border: none;
@@ -462,24 +485,25 @@ body.light-mode #searchBox {
     background-color: #007BFF;
     color: #fff;
     cursor: pointer;
-  }
+}
   
-  button:hover {
+button:hover {
     background-color: #0056b3;
     transition-duration: 1.2s;
-  }
-  
-  /* Animation */
-  @keyframes slideDown {
+}
+
+/* Animation */
+@keyframes slideDown {
     from {
-      top: -300px;
-      opacity: 0;
+        top: -300px;
+        opacity: 0;
     }
     to {
-      top: 0;
-      opacity: 1;
+        top: 0;
+        opacity: 1;
     }
-  }
+}
+
   
 .login-modal, .register-modal {
     position: fixed;
