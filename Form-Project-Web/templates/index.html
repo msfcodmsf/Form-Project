@@ -7,18 +7,18 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
 </head>
 <body>
+ 
+</script>
 <div id="düzenbar">
     <div id="bar">
         <img id="logo" src="/static/png/logo.png">
         <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
         <div id="darkmod">
-        <span class="theme-mode">
             <span class="theme-mode">
                 <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
                   <i id="themeIcon" class="fas fa-sun"></i></a> 
-              </span>
-        </span>
-    </div>
+            </span>
+        </div>
         <div id="girişbar">
             <nav>
                 {{if .LoggedIn}}
@@ -31,19 +31,15 @@
         </div>
     </div>
 </div>
-
-<div></div>
-<div></div>
-<div></div>
-<div></div>
+<div id="görünmezbar"></div>
 </div>
     <div id="left">
         <div id="centerolustur">
             {{if .LoggedIn}}
-                <a href="/createPost" style="text-decoration: none; color: white;">Create a new post</a>
-            {{else}}
-                <a href="/login" style="text-decoration: none; color: white;">Create a new post</a>
-            {{end}}
+            <a href="/createPost" style="text-decoration: none; color: white;">Create a new post</a>
+        {{else}}
+            <a href="javascript:void(0);" onclick="openModal('loginModal')" style="text-decoration: none; color: white;">Create a new post</a>
+        {{end}}
         </div>
         
         <div id="leftkatagoricont">
@@ -131,34 +127,58 @@
         </div>
       </div>
 
+      
+    
 
+    <div id="logoutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('logoutModal')">&times;</span>
+            <h1>Çıkış Yap</h1>
+            <p>Çıkış yapmak istediğinize emin misiniz?</p>
+            <button onclick="window.location.href='/logout';">Evet</button>
+            <button onclick="closeModal('logoutModal')">Hayır</button>
+        </div>
+    </div>
+
+   <script src="/static/akankod.js"></script>
+    
     <script>
-     // Modal açma fonksiyonu
+// Modal açma fonksiyonu
 function openModal(modalId) {
-  document.getElementById(modalId).style.display = "block";
+    document.getElementById(modalId).style.display = "block";
 }
 
 // Modal kapatma fonksiyonu
 function closeModal(modalId) {
-  document.getElementById(modalId).style.display = "none";
+    document.getElementById(modalId).style.display = "none";
 }
 
 // Sayfa yüklendiğinde butonlara event listener ekle
-window.onload = function() {
-  document.querySelector('a[href="/login"]').addEventListener('click', function(event) {
-    event.preventDefault();
-    openModal('loginModal');
-  });
+window.onload = function () {
+    document.querySelector('a[href="/login"]').addEventListener('click', function (event) {
+        event.preventDefault();
+        openModal('loginModal');
+    });
+
+    document.querySelector('a[href="/register"]').addEventListener('click', function (event) {
+        event.preventDefault();
+        openModal('registerModal');
+    });
+
+    document.querySelector('a[href="/logout"]').addEventListener('click', function (event) {
+        event.preventDefault();
+        openModal('logoutModal');
+    });
 }
 
 // Modal dışında bir yere tıklandığında kapatma fonksiyonu
-window.onclick = function(event) {
-  if (event.target.classList.contains('modal')) {
-    closeModal(event.target.id);
-  }
+window.onclick = function (event) {
+    if (event.target.classList.contains('modal')) {
+        closeModal(event.target.id);
+    }
 }
-
-    </script>
+    </script>   
     <script src="/static/scripts.js"></script>
+
 </body>
 </html>

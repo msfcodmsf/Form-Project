@@ -1,4 +1,7 @@
+// İkinci JavaScript dosyanızın içeriği burada
+
 // ... other JavaScript ...
+
 document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
@@ -16,9 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-
-
-
 // ... (gece/gündüz modu kodları)
 
 const languages = ["Python", "JavaScript", "Java", "C#", "C++", "PHP", "Ruby", "Swift", "Go", "Kotlin", "Rust"];
@@ -29,6 +29,8 @@ const selectedLanguagesSet = new Set();
 const selectedLanguagesContainer = document.getElementById('selectedLanguagesContainer');
 const selectedLanguagesList = document.getElementById('selectedLanguagesList');
 const clearButton = document.getElementById('clearButton');
+
+// Devam eden kodlarınız burada devam eder...
 
 function searchLanguages() {
     const searchTerm = searchBox.value.toLowerCase();
@@ -166,3 +168,18 @@ const draw=()=>{
 
 
 setInterval(draw, 30)
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const baslik = document.getElementById("baslik");
+  const etiketler = document.getElementById("etiketler");
+  const gonderButton = document.getElementById("gonder");
+
+  CKEDITOR.replace('editor'); // 'editor' div'ini CKEditor ile değiştirir
+
+  gonderButton.addEventListener("click", () => {
+    const editorData = CKEDITOR.instances.editor.getData(); // CKEditor içeriğini al
+    // Burada editorData'yı (başlık, etiket, içerik) sunucuya gönderebilirsiniz.
+    alert("Tartışma başlatıldı! İçerik:\n" + editorData);
+  });
+});

@@ -1,0 +1,159 @@
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: auto;
+}
+
+input {
+    width: 90%;
+    height: 30%;
+    margin-bottom: 2%;
+    background-color: black;
+    color: white;
+}
+
+button {
+    padding: 10px;
+    font-size: 18px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+    transition-duration: 1.2s;
+  }
+
+#center {
+    width: 50%;
+    height: 50%;
+    margin-top: 50%;
+    margin-left: 50%;
+    margin: 0 auto;
+    background-color: rgb(16, 52, 48);
+    color: white;
+}
+
+#centercontent {
+    width: 100%;
+    height: 20%;
+    margin-bottom: 2%;
+    background-color: black;
+    color: white;
+}
+
+body.light-mode #center {
+    background-color: rgb(207, 18, 18);
+    color: black;
+}
+
+
+body.night-mode #center {
+    background-color: aqua;
+}
+
+
+/* Tema Modu İkon */
+#themeToggle i {
+    transition: all 0.2s ease;
+  }
+  
+  #themeIcon.fas.fa-sun {
+    color: orange; 
+  }
+  
+  #themeIcon.fas.fa-moon {
+    color: rgb(209, 209, 209); 
+  }
+
+/* Tema modu ikon */
+.theme-mode {
+    margin-left: auto;
+    display: block;
+}
+
+.theme-mode:hover,
+.theme-mode:focus,
+.theme-mode:active {
+    transform: rotate(1deg);
+    transition-duration: 1.2s;
+}
+
+.theme-mode a {
+    text-decoration: none;
+}
+
+.theme-mode i {
+    transition: all 0.2s ease;
+}
+
+/* Canvas için z-index ayarı */
+/* Canvas için z-index ve pozisyon ayarı */
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Canvas arka planda kalacak */
+}
+
+/* Light mode için arka plan rengi */
+body.light-mode canvas {
+    background-color: white;
+}
+
+/* Night mode için arka plan rengi */
+body.night-mode canvas {
+    background-color: rgb(20, 25, 31);
+}
+
+
+.container {
+    width: 80%;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+  }
+  
+  img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    float: left;
+    margin-right: 10px;
+  }
+  
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    box-sizing: border-box;
+  }
+  
+  button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+  }
+  #editor {
+    width: 100%;
+    height: 200px; /* İstediğiniz yüksekliği ayarlayabilirsiniz */
+    margin: 10px 0;
+    resize: none;
+  }
+  /* ... (diğer CSS kodları) ... */
+
+.cke_contents { /* CKEditor içeriğinin bulunduğu div'e stil uygulayın */
+    resize: none; /* Yeniden boyutlandırmayı devre dışı bırakın */
+    height: 300px; /* İstediğiniz sabit yüksekliği belirleyin */
+    /* Diğer stil özellikleri (genişlik, kenarlık vb.) */
+  }
+  
+  textarea {
+    resize: none;
+  }

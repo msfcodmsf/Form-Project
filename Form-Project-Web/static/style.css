@@ -2,7 +2,7 @@ html, body {
     height: 100%;
     width: 100%;
     margin: 0;
-    overflow: hidden;
+    overflow: auto;
 }
 
 #banner {
@@ -25,10 +25,18 @@ body.light-mode #banner {
     height: 5%;
     display: flex;
     margin-left: 21%;
+    position: fixed;
+    z-index: 1;
 }
 #bar {
     width: 100%;
     height: 100%;
+    display: flex;
+}
+
+#görünmezbar {
+    width: 100%;
+    height: 3%;
     display: flex;
 }
 
@@ -38,6 +46,7 @@ body.light-mode #banner {
     margin-left: 27%;
     padding-top: 5px;
 }
+
 
 #darkmod {
     width: 3%;
@@ -62,8 +71,13 @@ body.light-mode #banner {
 
 .button:hover {
     background-color: #c86a12; /* Hover durumunda rengi değiştir */
+    transition-duration: 1.2s;
 }
 
+body.night-mode .button:hover {
+    background-color: #c86a12; /* Hover durumunda rengi değiştir */
+    transition-duration: 1.2s;
+}
 
 #left {
     width: 12%;
@@ -71,13 +85,18 @@ body.light-mode #banner {
     float: left;
     margin-left: 21%;
     margin-top: 2%;
+    position: fixed;
 }
 
 #leftkatagoricont {
     width: 100%;
     height: 5%;
-
     margin-top: 5%;
+    color: #000;
+}
+
+body.night-mode #leftkatagoricont {
+    color: white;
 }
 
 #filtre1 {
@@ -91,35 +110,56 @@ body.light-mode #banner {
 
 #filtre {
     width: 10%;
-    height: 80%;
+    height: 70%;
     float: left;
     margin-right: 5%;
     text-align: center;
     padding-top: 15px;
     background-color:rgb(239, 242, 246);
+    border-radius: 5px;
 }
+
+#filtre:hover {
+    background-color: #c86a12;
+    transition-duration: 1.2s;
+}
+
+body.night-mode #filtre:hover {
+    background-color: #c86a12;
+    transition-duration: 1.2s;
+}
+
 
 #center {
     width: 45%;
     height: 100%;
-    float: left;
+    float: right;
     margin-top: 2%;
-
+    margin-right: 23%;
+    position: relative;
+    
 }
 
 #centercont {
     width: 100%;
     height: 10%;
     margin-top: 2%;
+    background-color: rgb(239, 242, 246);
+    border-radius: 10px 0 0 10px;
 }
 
 #centerolustur {
     width: 80%;
     height: 4%;
     background-color: rgb(18, 40, 205);
-    border-radius: 5%;
+    border-radius: 5px;
     text-align: center;
     padding-top: 15px;
+}
+
+#centerolustur:hover {
+    background-color: #163b61;
+    transition-duration: 1.2s;
 }
 
 #centerprofilcont {
@@ -127,6 +167,7 @@ body.light-mode #banner {
     height: 100%;
     float: left;
     background-color:rgb(239, 242, 246);
+    border-radius: 10px 0 0 10px;
 }
 
 #profil {
@@ -136,6 +177,8 @@ body.light-mode #banner {
     background-color: #8edc35;
     margin-left: 20%;
 }
+
+
 
 #centersorubaslik {
     margin-bottom: 3%;
@@ -157,6 +200,7 @@ body.light-mode #banner {
     height: 100%;
     float: left;
     background-color:rgb(239, 242, 246);
+    border-radius: 0px 10px 10px 0px;
 }
 
 
@@ -201,15 +245,15 @@ li a {
 }
 
 li a:hover, .menu:hover { /*ÖNEMLİİİ*/
-    color: #8edc35;
+    color: #bb7513;
+}
+body.night-mode li a:hover, .menu:hover { /*ÖNEMLİİİ*/
+    color: #bb7513;
 }
 
 
-/* Gece modu */
-body.night-mode {
-    background-color:rgb(20, 25, 31);
-    color: rgb(255, 255, 255);
-}
+
+
 
 
 body.night-mode .button {  
@@ -218,19 +262,10 @@ body.night-mode .button {
 }
 
 body.light-mode .button {  
-    background-color:rgb(24, 157, 102);
-  color: rgb(255, 255, 255); 
+    background-color:rgb(29, 38, 49);
+  color: black; 
 }
 
-
-body.night-mode #bar,
-body.night-mode #düzenbar,
-body.night-mode #girişbar,
-body.night-mode #left,
-body.night-mode #center {
-  background-color: rgb(20, 25, 31);
-  color: rgb(255, 255, 255);
-}
 
 body.night-mode #searchBox {
     background-color: rgb(20, 25, 31);
@@ -243,7 +278,7 @@ body.night-mode #centerprofilcont,
 body.night-mode #centerlike,
 body.night-mode #filtre,
 body.night-mode #centersorukatagori,
-body.night-modeu ul,
+body.night-mode ul,
 body.night-mode li,
 body.night-mode li a {
     background-color:rgb(29, 38, 49);
@@ -255,22 +290,6 @@ body.night-mode #centerlike {
 }
 
 /***********************************************/
-/* Gündüz modu */
-body.light-mode {
-  background-color: rgb(255, 255, 255);
-  color: black;
-}
-body.light-mode #bar,
-body.light-mode #girişbar,
-body.light-mode #düzenbar {
-    background-color: rgb(255, 255, 255);
-    color: black;
-}
-
-body.light-mode ul {
-    background-color: rgb(255, 255, 255);
-    color: black;
-}
 
 body.light-mode #loginmodal {
     background-color: rgb(207, 18, 18);
@@ -356,6 +375,7 @@ body.light-mode #searchBox {
     color: rgb(255, 255, 255); /* Beyaz metin */
     border: none; /* Kenarlık yok */
     padding: 8px 15px; /* İç boşluk */
+
     border-radius: 5px; /* Yuvarlak köşeler */
     cursor: pointer; /* Tıklanabilir olduğunu gösteren imleç */
     transition: background-color 0.2s; /* Arka plan rengi geçiş efekti */
@@ -387,13 +407,9 @@ body.light-mode #searchBox {
     width: 100%;
     height: 100%;   
     overflow: auto;
-background-image: url("/static/png/Matrix\ wallpaper\ gif.gif");
+    background-color: rgba(0, 0, 0, 0.5); /* Arkaplan rengi ve opaklık */
   }
   
-  /* Modal Content Box */
-  /* Modal Content Box */
-/* Modal Content Box */
-/* Modal Content Box */
 .modal-content {
     color: #8edc35;
     position: relative;
@@ -433,15 +449,11 @@ background-image: url("/static/png/Matrix\ wallpaper\ gif.gif");
   }
   
   
-  label, input, button {
-    margin-bottom: 10px;
-  }
   
   label {
     font-size: 18px;
   }
-  
-  
+
   button {
     padding: 10px;
     font-size: 18px;
@@ -454,6 +466,7 @@ background-image: url("/static/png/Matrix\ wallpaper\ gif.gif");
   
   button:hover {
     background-color: #0056b3;
+    transition-duration: 1.2s;
   }
   
   /* Animation */
@@ -478,3 +491,25 @@ background-image: url("/static/png/Matrix\ wallpaper\ gif.gif");
     /* Gerekirse pop-up stilleri buraya eklenebilir */
 }
 
+/* Canvas için z-index ayarı */
+/* Canvas için z-index ve pozisyon ayarı */
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Canvas arka planda kalacak */
+}
+
+/* Light mode için arka plan rengi */
+body.light-mode canvas {
+    background-color: white;
+}
+
+/* Night mode için arka plan rengi */
+body.night-mode canvas {
+    background-color: rgb(20, 25, 31);
+}
+
+textarea {
+    resize: none;
+}
