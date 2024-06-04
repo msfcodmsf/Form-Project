@@ -62,7 +62,7 @@ body.light-mode #banner {
 
 .button {
     display: inline-block;
-    padding: 10px 20px;
+    padding: 10px 20px;1
     text-decoration: none;
     background-color: rgb(239, 242, 246); /* Örnek renk */
     color: black; /* Yazı rengi */
@@ -80,8 +80,8 @@ body.night-mode .button:hover {
 }
 
 #left {
-    width: 12%;
-    height: 80%;
+    width: 10%;
+    height: 100%;
     float: left;
     margin-left: 21%;
     margin-top: 2%;
@@ -93,6 +93,13 @@ body.night-mode .button:hover {
     height: 5%;
     margin-top: 5%;
     color: #000;
+    background-color: whitesmoke;
+}
+
+#leftkatagoriicon {
+    width: 10%;
+    height: 100%;
+    background-color: rgb(215, 27, 27);
 }
 
 body.night-mode #leftkatagoricont {
