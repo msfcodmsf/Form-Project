@@ -183,3 +183,24 @@ document.addEventListener('DOMContentLoaded', function() {
     alert("Tartışma başlatıldı! İçerik:\n" + editorData);
   });
 });
+
+document.querySelectorAll('.text-block').forEach(block => {
+    if (block.scrollWidth > block.clientWidth) {
+        block.style.overflow = 'auto';
+    }
+});
+
+
+var textarea = document.getElementById("content");
+    var charCount = document.getElementById("charCount");
+
+    textarea.addEventListener("input", function() {
+        var charLength = textarea.value.length;
+        charCount.textContent = "Characters: " + charLength + "/600";
+
+        if (charLength > 600) {
+            charCount.style.color = "red";
+        } else {
+            charCount.style.color = "black";
+        }
+    });
