@@ -79,7 +79,10 @@
         <div id="centercont">
             {{range .Posts}}
             <div id="centerprofilcont">
-            <ul><li><h3>{{.Username}}</h3></li></ul>  
+                <div id="profil">
+                    <img white="80%" height="100%" src="/static/png/pp.png">
+                </div>
+            <ul><li>{{.Username}}</li></ul>  
             </div>
                 <div id="centersorubaslik">
                     <ul><li> <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3> </li></ul>
