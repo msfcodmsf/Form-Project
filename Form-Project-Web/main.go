@@ -109,8 +109,6 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
-	http.HandleFunc("/likeHandler", likeHandler)
-	http.HandleFunc("/DislikeHandler", dislikeHandler)
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
@@ -410,60 +408,12 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func likeHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := getSession(r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	postID := r.FormValue("post_id")
-	commentID := r.FormValue("comment_id")
-
-	if postID != "" {
-		_, err = db.Exec("INSERT INTO likes (user_id, post_id) VALUES (?, ?)", session.UserID, postID)
-	} else if commentID != "" {
-		_, err = db.Exec("INSERT INTO likes (user_id, comment_id) VALUES (?, ?)", session.UserID, commentID)
-	}
-
-	if err != nil {
-		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	// bu kodu alttakiyle değiştirerek deneme yapabiliriz
-	// http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-}
-
-func dislikeHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := getSession(r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	postID := r.FormValue("post_id")
-	commentID := r.FormValue("comment_id")
-
-	if postID != "" {
-		_, err = db.Exec("INSERT INTO Dislikes (user_id, post_id) VALUES (?, ?)", session.UserID, postID)
-	} else if commentID != "" {
-		_, err = db.Exec("INSERT INTO Dislikes (user_id, comment_id) VALUES (?, ?)", session.UserID, commentID)
-	}
-
-	if err != nil {
-		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	// bunuda dene
-	// http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-}
-
 func voteHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	if err != nil || session == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"redirect": "/login"})
 		return
 	}
 
@@ -471,7 +421,6 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	commentID := r.FormValue("comment_id")
 	voteTypeStr := r.FormValue("vote_type")
 
-	// Convert voteType from string to integer
 	voteType, err := strconv.Atoi(voteTypeStr)
 	if err != nil || (voteType != 1 && voteType != -1) {
 		handleErr(w, err, "Invalid vote type", http.StatusBadRequest)
@@ -526,9 +475,29 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	// bunu dene
-	// http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+
+	// Oy sayısını yeniden hesapla ve JSON olarak dön
+	var likeCount, dislikeCount int
+	if postID != "" {
+		err = db.QueryRow(`SELECT 
+			COALESCE(SUM(CASE WHEN vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+			COALESCE(SUM(CASE WHEN vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+			FROM votes WHERE post_id = ?`, postID).Scan(&likeCount, &dislikeCount)
+	} else if commentID != "" {
+		err = db.QueryRow(`SELECT 
+			COALESCE(SUM(CASE WHEN vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+			COALESCE(SUM(CASE WHEN vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+			FROM votes WHERE comment_id = ?`, commentID).Scan(&likeCount, &dislikeCount)
+	}
+
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]int{"like_count": likeCount, "dislike_count": dislikeCount}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func filterHandler(w http.ResponseWriter, r *http.Request) {
@@ -662,3 +631,8 @@ func getSession(r *http.Request) (*Session, error) {
 
 	return &session, nil
 }
+
+// func isAuthenticated(r *http.Request) bool {
+// 	_, err := getSession(r)
+// 	return err == nil
+// }
