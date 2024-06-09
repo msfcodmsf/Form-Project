@@ -15,9 +15,14 @@ const hexa = [0, 1, '青', '红', '黄', '绿', '蓝', '紫', '黑', '白', '橙
 let matrix = [];
 let fontSize = 16;
 
-for(let i = 0; i < canvas.width / fontSize; i++){
-    matrix[i] = 1;
+// Matrisin boyutlarını güncelle
+function updateMatrix() {
+    matrix = [];
+    for (let i = 0; i < canvas.width / fontSize; i++) {
+        matrix[i] = 1;
+    }
 }
+updateMatrix();
 
 const draw = () => {
     ctx.fillStyle = getCurrentBackgroundColor();
@@ -26,12 +31,12 @@ const draw = () => {
     ctx.fillStyle = 'rgb(0, 256, 0)';
     ctx.font = fontSize + "px monospace";
 
-    for(let i = 0; i < matrix.length; i++){
+    for (let i = 0; i < matrix.length; i++) {
         let char = hexa[Math.floor(Math.random() * 15)];
         ctx.fillText(char, i * fontSize, matrix[i] * fontSize);
 
         matrix[i]++;
-        if(matrix[i] * fontSize > canvas.height && Math.random() > 0.950){
+        if (matrix[i] * fontSize > canvas.height && Math.random() > 0.950) {
             matrix[i] = 0;
         }
     }
@@ -62,4 +67,11 @@ document.getElementById('themeToggle').addEventListener('click', () => {
         themeIcon.classList.remove('fa-moon');
         themeIcon.classList.add('fa-sun');
     }
+});
+
+// Pencere yeniden boyutlandırıldığında canvas ve matrisi güncelle
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    updateMatrix();
 });

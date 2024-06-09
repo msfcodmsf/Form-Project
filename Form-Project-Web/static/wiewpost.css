@@ -20,6 +20,14 @@ html, body {
   min-width: 50%; /* En az bu kadar genişlik */
 }
 
+#darkmod {
+  width: 3%;
+  height: 70%;
+  margin-left: 5%;
+  padding-top: 10px;
+  padding-left: 5px;
+}
+
 #like, button {
   float: left;
   padding: 5px 5px;
@@ -256,10 +264,6 @@ input, select, textarea {
   width: 40%; /* Tam genişlik */
   height: 65%;
   margin-top: 5px;
-}
-
-#bar, input {
-
 }
 
 

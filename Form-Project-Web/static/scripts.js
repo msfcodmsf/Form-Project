@@ -1,23 +1,150 @@
-// İkinci JavaScript dosyanızın içeriği burada
-
-// ... other JavaScript ...
-
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
+    const matrixThemeToggle = document.getElementById('matrixThemeToggle'); // Yeni eklenen buton
+    const body = document.body;
 
-    themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('night-mode');
+    const setTheme = (theme) => {
+        if (theme === 'night') {
+            body.classList.add('night-mode');
+            themeIcon.classList.replace('fa-sun', 'fa-moon');
+        } else if (theme === 'light') {
+            body.classList.remove('night-mode');
+            themeIcon.classList.replace('fa-moon', 'fa-sun');
+        } else if (theme === 'lightmatrix') {
+            body.classList.remove('night-mode');
+            body.style.setProperty('--background-color', '#ffffff');
+            body.style.setProperty('--text-color', '#00ff00');
+            themeIcon.classList.remove('fa-moon', 'fa-sun');
+            themeIcon.classList.add('fa-lightbulb');
+            startMatrixTheme(); // Matrix temalarını başlat
+        } else if (theme === 'nightmatrix') {
+            body.classList.add('night-mode');
+            body.style.setProperty('--background-color', '#000000');
+            body.style.setProperty('--text-color', '#ff00ff');
+            themeIcon.classList.remove('fa-moon', 'fa-sun');
+            themeIcon.classList.add('fa-lightbulb');
+            startMatrixTheme(); // Matrix temalarını başlat
+        }
+    };
 
-        if (document.body.classList.contains('night-mode')) {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-        } else {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
+    themeToggle.addEventListener('click', function () {
+        let currentTheme = 'day';
+        if (body.classList.contains('night-mode')) {
+            currentTheme = 'night';
+        } else if (body.style.getPropertyValue('--background-color') === 'rgb(255, 255, 255)') {
+            currentTheme = 'light';
+        } else if (body.style.getPropertyValue('--background-color') === 'rgb(0, 0, 0)') {
+            currentTheme = 'nightmatrix';
+        } else if (body.style.getPropertyValue('--background-color') === 'rgb(0, 255, 0)') {
+            currentTheme = 'lightmatrix';
+        }
+        if (currentTheme === 'day') {
+            setTheme('night');
+            localStorage.setItem('theme', 'night');
+        } else if (currentTheme === 'night') {
+            setTheme('light');
+            localStorage.setItem('theme', 'light');
+        } else if (currentTheme === 'light') {
+            setTheme('lightmatrix');
+            localStorage.setItem('theme', 'lightmatrix');
+        } else if (currentTheme === 'lightmatrix') {
+            setTheme('nightmatrix');
+            localStorage.setItem('theme', 'nightmatrix');
+        } else if (currentTheme === 'nightmatrix') {
+            setTheme('day');
+            localStorage.setItem('theme', 'day');
         }
     });
+
+    // Matrix temaları için buton dinleyicisi
+    matrixThemeToggle.addEventListener('click', function () {
+        setTheme('lightmatrix'); // Örnek olarak, lightmatrix temasını başlatıyorum
+        localStorage.setItem('theme', 'lightmatrix');
+    });
+
+    const savedTheme = localStorage.getItem('theme') || 'day';
+    setTheme(savedTheme);
+
+    // Matrix temalarını başlatan fonksiyon
+    function startMatrixTheme() {
+        const canvas = document.createElement('canvas');
+        document.body.appendChild(canvas);
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.overflow = 'auto';
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        updateCanvasBackgroundColor();
+
+        const hexa = [0, 1, '青', '红', '黄', '绿', '蓝', '紫', '黑', '白', '橙', '灰', '粉', '棕', '金', 'A', 'B', 'C', 'D', 'E', 'F', '银', '桃'];
+        let matrix = [];
+        let fontSize = 16;
+
+        function updateMatrix() {
+            matrix = [];
+            for (let i = 0; i < canvas.width / fontSize; i++) {
+                matrix[i] = 1;
+            }
+        }
+        updateMatrix();
+
+        const draw = () => {
+            ctx.fillStyle = getCurrentBackgroundColor();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'rgb(0, 256, 0)';
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < matrix.length; i++) {
+                let char = hexa[Math.floor(Math.random() * 15)];
+                ctx.fillText(char, i * fontSize, matrix[i] * fontSize);
+
+                matrix[i]++;
+                if (matrix[i] * fontSize > canvas.height && Math.random() > 0.950) {
+                    matrix[i] = 0;
+                }
+            }
+        };
+
+        setInterval(draw, 30);
+
+        function getCurrentBackgroundColor() {
+            return document.body.classList.contains('night-mode') ? 'rgb(28, 46, 69, 0.03)' : 'rgb(239, 242, 246, 0.03)';
+        }
+
+        function updateCanvasBackgroundColor() {
+            canvas.style.backgroundColor = document.body.classList.contains('night-mode') ? '' : 'white';
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            updateMatrix();
+        });
+    }
 });
+
+
+
+
+
+function searchLanguages() {
+    const input = document.getElementById('searchBox');
+    const filter = input.value.toLowerCase();
+    const nodes = document.getElementsByClassName('post');
+
+    for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].innerText.toLowerCase().includes(filter)) {
+            nodes[i].style.display = "flex";
+        } else {
+            nodes[i].style.display = "none";
+        }
+    }
+}
 
 // ... (gece/gündüz modu kodları)
 

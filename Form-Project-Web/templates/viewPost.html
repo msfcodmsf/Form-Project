@@ -8,7 +8,6 @@
 <body>
     <script src="/static/akankod.js"></script>
     <script src="/static/scripts.js"></script>
-    <!-- Theme Toggle -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const themeToggle = document.getElementById("themeToggle");
@@ -24,7 +23,6 @@
             });
         });
     </script>
-    <!-- Vote -->
     <script>
         function vote(postID, commentID, voteType) {
             var xhr = new XMLHttpRequest();
@@ -65,19 +63,27 @@
         }
     </script>
 
-    <div id="düzenbar">
-        <div id="bar">
-            <a title="Back to home" href="/"><img src="/static/png/logo.png"></a>
-            <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchLanguages()">
-            <div id="darkmod">
-                <span class="theme-mode">
-                    <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
-                        <i id="themeIcon" class="fas fa-sun"></i>
-                    </a>
-                </span>
-            </div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+    $('#bar_static').load('/static/bar.html');
+});
+</script>
+
+<html>
+    <body>
+        <div id="düzenbar">
+    <div id="bar">
+        <img id="logo" src="/static/png/logo.png">
+        <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
+        <div id="darkmod">
+            <span class="theme-mode">
+                <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
+                  <i id="themeIcon" class="fas fa-sun"></i></a> 
+            </span>
         </div>
     </div>
+</div>
     <div id="görünmezbar"></div>
     <div id="center">
         <div id="centercont">
@@ -149,5 +155,120 @@
             </div>
         </div>
     </div>
+
+
+    
+    <span class="close" onclick="closeModal('loginModal')">&times;</span>
+
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+          <span class="close" onclick="closeModal('loginModal')">&times;</span>
+          <h1>Login</h1>
+          <form action="/login" method="post">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required><br><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required><br><br>
+            <button type="submit">Login</button>
+          </form>
+        </div>
+      </div>
+    
+      <div id="registerModal" class="modal">
+        <div class="modal-content">
+          <span class="close" onclick="closeModal('registerModal')">&times;</span>
+          <h1>Register</h1>
+          <form action="/register" method="post">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required><br><br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required><br><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required><br><br>
+            <label for="password">Confirim Password:</label>
+            <input type="password" id="password" name="password" required><br><br>
+            <button type="submit">Register</button>
+          </form>
+        </div>
+      </div>
+
+    <div id="logoutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('logoutModal')">&times;</span>
+            <h1>Çıkış Yap</h1>
+            <p>Çıkış yapmak istediğinize emin misiniz?</p>
+            <button onclick="window.location.href='/logout';">Evet</button>
+            <button onclick="closeModal('logoutModal')">Hayır</button>
+        </div>
+    </div>
+
+    <script>
+        function addModalEventListeners() {
+    // Login butonuna event listener ekle
+    var loginBtn = document.querySelector('a[href="/login"]'); 
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('loginModal');
+        });
+    }
+
+    // Register butonuna event listener ekle
+    var registerBtn = document.querySelector('a[href="/register"]');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('registerModal');
+        });
+    }
+
+    // Logout butonuna event listener ekle
+    var logoutBtn = document.querySelector('a[href="/logout"]');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('logoutModal');
+        });
+    }
+
+    // Create Post butonuna event listener ekle
+    var createPostBtn = document.querySelector('a[onclick="openModal(\'createPostModal\')"]');
+    if (createPostBtn) {
+        createPostBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal('createPostModal');
+        });
+    }
+}
+
+// Modal açma fonksiyonu
+function openModal(modalId) {
+  var modal = document.getElementById(modalId);
+  modal.style.display = 'block';
+  modal.querySelector('.modal-content').style.bottom = '10%'; // Slide up animation
+  modal.querySelector('.modal-content').style.opacity = '1';
+}
+
+function closeModal(modalId) {
+  var modal = document.getElementById(modalId);
+  modal.querySelector('.modal-content').style.bottom = '-100%'; // Slide down animation
+  modal.querySelector('.modal-content').style.opacity = '0';
+  setTimeout(function() {
+    modal.style.display = 'none';
+    addModalEventListeners(); 
+  }, 500); // Match transition duration
+}
+
+// Initial Setup
+window.onload = function () {
+  addModalEventListeners();
+};
+
+window.onclick = function (event) {
+  if (event.target.classList.contains('modal')) {
+    closeModal(event.target.id);
+  }
+};
+    </script>
 </body>
 </html>
