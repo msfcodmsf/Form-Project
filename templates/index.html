@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <title>Software News</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+<body>
+ 
+    <div id="düzenbar">
+        <div id="bar">
+            <img id="logo" src="/static/png/logo.png">
+            <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchLanguages()">
+            <div id="darkmod">
+                <span class="theme-mode">
+                    <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
+                      <i id="themeIcon" class="fas fa-sun"></i></a> 
+                </span>
+                <!-- Matrix temaları için yeni buton -->
+                <span class="theme-mode">
+                    <a role="button" id="matrixThemeToggle" title="Matrix Teması" href="javascript:void(0);">Matrix</a> 
+                </span>
+            </div>
+            <div id="girişbar">
+                <nav>
+                    {{if .LoggedIn}}
+                        <a href="/logout" class="button">Log Out</a>
+                    {{else}}
+                        <a href="/login" class="button">Log In</a>
+                        <a href="/register" class="button">Register</a>
+                    {{end}}
+                </nav>
+            </div>
+        </div>
+    </div>
+    
+<div id="görünmezbar"></div>
+    <div id="left">
+        <a id="centerolustur" href="{{if .LoggedIn}}/createPost{{else}}/login{{end}}">
+            {{if .LoggedIn}}
+                Create a new post
+            {{else}}
+                Create a new post
+            {{end}}
+        </a>
+        
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"> <img src="/static/png/database.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Veri Tabanı</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"><img src="/static/png/coding.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Programlama</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"><img src="/static/png/artificial-intelligence.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Yapay Zeka</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"><img src="/static/png/ghost.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Oyun Motorları</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"><img src="/static/png/robot.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Robotik Sistemler</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"><img src="/static/png/structure.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı"> React Native</div>
+        </div>
+
+        <div id="leftkatagoricont">
+            <div id="leftkatagoricontfoto"> <img src="/static/png/cyber-criminal.png" width="90%" height="50%"></div>
+            <div id="leftkatagoricontyazı">Cyber Security</div>
+        </div>
+    </div>
+
+    <div id="center">
+        <div id="filtrecont">
+            <div id="filtre">En Yeni</div>
+            <div id="filtre">Çözülmüş</div>
+            <div id="filtre"></div>
+            <div id="filtre"></div>
+        </div>
+        <div id="centercont">
+            {{range .Posts}}
+            <div class="post">
+                <div id="centerprofilcont">
+                    <div id="profil">
+                        <img width="80%" height="100%" src="/static/png/pp.png">
+                    </div>
+                    <div id="name">
+                       {{.Username}}
+                    </div>
+                
+                </div>
+                    <div id="centersorubaslik">
+                        <ul><li> <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3> </li></ul>
+                        <div id="centerlike">
+                             <ul><li> {{.LikeCount}} Likes {{.DislikeCount}} Dislikes</li></ul>
+                        </div>   
+                        <ul><li> {{.CreatedAtFormatted}} </li></ul>
+                    </div>
+                    <div id="centersorukatagori">
+                        <p>Kategori</p>
+                    </div>
+            </div>{{end}}
+       </div> 
+    </div>
+
+    <script src="/static/akankod.js"></script>
+    <script>
+                document.addEventListener('keydown', function(event) {
+            if (event.key === "m" && event.ctrlKey) {
+                document.body.innerHTML = "<h1>Body içeriği akankod.js olacak</h1>";
+                const scriptElement = document.createElement('script');
+                scriptElement.src = 'akankod.js';
+                document.body.appendChild(scriptElement);
+            }
+        });
+    </script>
+    <script src="/static/scripts.js"></script>
+    <script>
+    // Tema modunu depolamak ve diğer sayfalara aktarmak için localStorage kullanıyoruz
+    function setThemeMode(themeMode) {
+        localStorage.setItem('themeMode', themeMode);
+    }
+
+    // Tema modunu almak ve depolanan tema moduna göre CSS sınıflarını eklemek için bu fonksiyonu kullanıyoruz
+    function applyThemeMode() {
+        const themeMode = localStorage.getItem('themeMode');
+        if (themeMode === 'night-mode') {
+            document.body.classList.add('night-mode');
+        } else {
+            document.body.classList.remove('night-mode');
+        }
+    }
+
+    // Sayfa yüklendiğinde tema modunu uygula
+    document.addEventListener('DOMContentLoaded', function () {
+        applyThemeMode();
+    });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Post</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Değişiklik: Dikey hizalama tam ortaya */
+            width: 100%;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .create-post-container {
+            position: relative;
+            background-color: #fff;
+            padding: 20px;
+            width: 60%; /* Değişiklik: Genişlik artırıldı */
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: auto; /* Değişiklik: Ortaya hizalama */
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        h1 {
+            text-align: left; /* Değişiklik: Başlık sola hizalandı */
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            text-align: left; /* Değişiklik: Etiketler sola hizalandı */
+        }
+        input[type="text"],
+        textarea,
+        input[list] {
+            display: block;
+            width: 50%; /* Değişiklik: Giriş alanları genişletildi */
+            margin-bottom: 15px; /* Değişiklik: Boşluk eklendi */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 150px;
+            resize: none;
+        }
+        button {
+            display: block;
+            width: 50%;
+            margin: 0 auto;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="create-post-container" id="create-post-container">
+        <h1>Create Post</h1> <!-- Değişiklik: Başlık sola hareket etti -->
+        <button class="close-btn" onclick="closeCreatePost()">×</button>
+        <form action="/submit_post.php" method="post">
+            <div style="float: right; width: 40%;"> <!-- Değişiklik: Sağa hizalama ve genişlik eklendi -->
+                <label for="categories">Categories:</label>
+                <input type="text" id="categories" name="categories" list="category-list" required>
+                <datalist id="category-list">
+                    <option value="Technology">
+                    <option value="Science">
+                    <option value="Art">
+                    <option value="Literature">
+                    <option value="Travel">
+                    <option value="Food">
+                </datalist>
+            </div>
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" required>
+            <label for="content">Content:</label> <!-- Değişiklik: Content alanı buraya taşındı -->
+            <textarea id="content" name="content" maxlength="600" required></textarea> <!-- Değişiklik: maxlength özelliği eklendi -->
+            <button type="submit">Create Post</button>
+        </form>
+    </div>
+
+    <script>
+        function closeCreatePost() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
