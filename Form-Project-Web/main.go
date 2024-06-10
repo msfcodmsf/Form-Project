@@ -23,10 +23,10 @@ var (
 )
 
 type User struct {
-	ID       int
-	Email    string
-	Username string
-	Password string
+	ID       int    `validate:"-"`
+	Email    string `validate:"required,email"`
+	Username string `validate:"required,alphanum,min=3,max=20"`
+	Password string `validate:"required,min=6"`
 }
 
 type Post struct {
@@ -34,7 +34,7 @@ type Post struct {
 	UserID             int
 	Title              string
 	Content            string
-	Categories         []string
+	Categories         []string // JSON olarak kaydedilecek ve geri okunacak
 	CreatedAt          time.Time
 	CreatedAtFormatted string
 	LikeCount          int
@@ -66,21 +66,6 @@ type Session struct {
 	UserID int
 	Expiry time.Time
 }
-
-type RegisterInput struct {
-	Email    string `validate:"required,email"`
-	Username string `validate:"required,alphanum,min=3,max=20"`
-	Password string `validate:"required,min=6"`
-}
-
-// type Filter struct {
-// 	Search string
-// 	Category string
-// }
-
-// type Categories struct {
-// 	Categories []string
-// }
 
 func main() {
 	var err error
@@ -234,15 +219,39 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		email := r.FormValue("email")
 		username := r.FormValue("username")
 		password := r.FormValue("password")
+		confirmPassword := r.FormValue("confirm_password")
 
-		input := RegisterInput{
+		user := User{
 			Email:    email,
 			Username: username,
 			Password: password,
 		}
 
-		if err := validate.Struct(input); err != nil {
+		err := validate.Struct(user)
+		if err != nil {
+			if _, ok := err.(validator.ValidationErrors); ok {
+				errorMessages := make(map[string]string)
+				for _, err := range err.(validator.ValidationErrors) {
+					switch err.Field() {
+					case "Username":
+						errorMessages[err.Field()] = "Username must be at least 4 characters long."
+					case "Password":
+						errorMessages[err.Field()] = "Password must be at least 6 characters long."
+					default:
+						errorMessages[err.Field()] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", err.Field(), err.Tag())
+					}
+				}
+				renderRegisterTemplate(w, errorMessages)
+				return
+			}
 			handleErr(w, err, "Invalid input", http.StatusBadRequest)
+			return
+		}
+
+		if password != confirmPassword {
+			errorMessages := make(map[string]string)
+			errorMessages["ConfirmPassword"] = "Password and confirm password do not match."
+			renderRegisterTemplate(w, errorMessages)
 			return
 		}
 
@@ -262,12 +271,20 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	renderRegisterTemplate(w, nil)
+}
+
+func renderRegisterTemplate(w http.ResponseWriter, errorMessages map[string]string) {
 	tmpl, err := template.ParseFiles("templates/register.html")
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, nil)
+
+	err = tmpl.Execute(w, errorMessages)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -275,32 +292,33 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		email := r.FormValue("email")
 		password := r.FormValue("password")
 
-		var user User
-		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Password)
+		var id int
+		var hashedPassword string
+		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &hashedPassword)
 		if err != nil {
 			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
 
-		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 		if err != nil {
 			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
 
-		sessionID := uuid.NewString()
-		expiry := time.Now().Add(5 * time.Minute)
+		sessionToken := uuid.New().String()
+		expiresAt := time.Now().Add(30 * time.Minute)
 
-		_, err = db.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionID, user.ID, expiry)
+		_, err = db.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
 		if err != nil {
 			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:    "session_id",
-			Value:   sessionID,
-			Expires: expiry,
+			Name:    "session_token",
+			Value:   sessionToken,
+			Expires: expiresAt,
 		})
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -312,26 +330,35 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, nil)
+
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session_id")
+	cookie, err := r.Cookie("session_token")
 	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		if err == http.ErrNoCookie {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	_, err = db.Exec("DELETE FROM sessions WHERE id = ?", cookie.Value)
+	sessionToken := cookie.Value
+	_, err = db.Exec("DELETE FROM sessions WHERE id = ?", sessionToken)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:   "session_id",
-		Value:  "",
-		MaxAge: -1,
+		Name:    "session_token",
+		Value:   "",
+		Expires: time.Now().Add(-1 * time.Second),
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -349,12 +376,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		content := r.FormValue("content")
 		categories := r.Form["categories"]
 
-		// Bu kısım ile alttaki kısım aynı mı. Bunu anladım ama alttaki ne görev yapıyor bilmiyorum.
-		// if title == "" || content == "" || len(categories) == 0 {
-		//     handleErr(w, nil, "Title, content and categories are required", http.StatusBadRequest)
-		//     return
-		// }
-
+		// Kategorileri JSON formatına dönüştür
 		categoriesJSON, err := json.Marshal(categories)
 		if err != nil {
 			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
@@ -530,7 +552,11 @@ func filterHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		json.Unmarshal([]byte(categories), &post.Categories)
+		err = json.Unmarshal([]byte(categories), &post.Categories)
+		if err != nil {
+			handleErr(w, err, "Error parsing categories", http.StatusInternalServerError)
+			return
+		}
 		posts = append(posts, post)
 	}
 
@@ -551,21 +577,30 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var post Post
-	var categories string
-	err := db.QueryRow(`SELECT posts.id, posts.user_id, posts.title, posts.content, posts.created_at, users.username,
+	var categoriesJSON string // Kategorileri tutmak için bir değişken tanımlayın
+	err := db.QueryRow(`SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
 						COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
 						COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
 						FROM posts
 						JOIN users ON posts.user_id = users.id
 						LEFT JOIN votes ON votes.post_id = posts.id
 						WHERE posts.id = ?
-						GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
+						GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
-	json.Unmarshal([]byte(categories), &post.Categories)
+
+	// Kategorileri JSON'dan çıkar
+	var categories []string
+	err = json.Unmarshal([]byte(categoriesJSON), &categories)
+	if err != nil {
+		handleErr(w, err, "Error parsing categories", http.StatusInternalServerError)
+		return
+	}
+
 	post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+	post.Categories = categories // Post nesnesine kategorileri ata
 
 	rows, err := db.Query(`SELECT comments.id, comments.post_id, comments.user_id, comments.content, comments.created_at, users.username,
 							COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -613,26 +648,33 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSession(r *http.Request) (*Session, error) {
-	cookie, err := r.Cookie("session_id")
+	cookie, err := r.Cookie("session_token")
 	if err != nil {
+		if err == http.ErrNoCookie {
+			return nil, nil
+		}
 		return nil, err
 	}
 
+	sessionToken := cookie.Value
+
 	var session Session
-	err = db.QueryRow("SELECT id, user_id, expiry FROM sessions WHERE id = ?", cookie.Value).Scan(&session.ID, &session.UserID, &session.Expiry)
+	err = db.QueryRow("SELECT id, user_id, expiry FROM sessions WHERE id = ?", sessionToken).Scan(&session.ID, &session.UserID, &session.Expiry)
 	if err != nil {
 		return nil, err
 	}
 
 	if session.Expiry.Before(time.Now()) {
-		_, _ = db.Exec("DELETE FROM sessions WHERE id = ?", session.ID)
 		return nil, fmt.Errorf("session expired")
 	}
 
+	// Oturum süresini her kontrol ettiğimizde uzatalım
+	newExpiry := time.Now().Add(30 * time.Minute)
+	_, err = db.Exec("UPDATE sessions SET expiry = ? WHERE id = ?", newExpiry, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	session.Expiry = newExpiry
+
 	return &session, nil
 }
-
-// func isAuthenticated(r *http.Request) bool {
-// 	_, err := getSession(r)
-// 	return err == nil
-// }

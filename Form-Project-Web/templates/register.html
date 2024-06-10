@@ -94,15 +94,35 @@ document.getElementById('themeToggle').addEventListener('click', function() {
     </script>
     <div class="register-container">
         <h1>Register</h1>
-        <form action="/register" method="post">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-            <label for="password">Confirm Password</label>
-            <input type="password" id="password" name="password" required>
+        <form method="post" action="/register">
+            <label for="email">Email:</label>
+            <input type="text" id="email" name="email">
+            {{if .Email}}
+                <div style="color:red">{{.Email}}</div>
+            {{end}}
+    
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username">
+            {{if .Username}}
+                <div style="color:red">{{.Username}}</div>
+            {{else}}
+                <div>Username must be at least 4 characters long.</div>
+            {{end}}
+    
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password">
+            {{if .Password}}
+                <div style="color:red">{{.Password}}</div>
+            {{else}}
+                <div>Password must be at least 6 characters long.</div>
+            {{end}}
+    
+            <label for="confirm_password">Confirm Password:</label>
+            <input type="password" id="confirm_password" name="confirm_password">
+            {{if .ConfirmPassword}}
+                <div style="color:red">{{.ConfirmPassword}}</div>
+            {{end}}
+    
             <button type="submit">Register</button>
         </form>
     </div>
