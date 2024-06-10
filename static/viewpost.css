@@ -60,11 +60,11 @@ body.night-mode {
   padding: 5px 5px;
 }
 
-#submit, button {
+#submit {
   background-color: #8edc35;
 }
 
-#submit, button:hover {
+#submit:hover {
   background-color: #71ac2d;
 }
 
