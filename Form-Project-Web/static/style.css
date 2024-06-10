@@ -99,6 +99,18 @@ body.night-mode .button:hover {
     background-color: whitesmoke;
 }
 
+#leftkatagoricontfoto {
+    width: 10%;
+    height: 100%;
+    color: var(--text-color);
+}
+
+#leftkatagoricont:hover {
+    background-color: #f0f0f0;  /* Change background color on hover */
+    transform: scale(1.05);  /* Slightly enlarge the element on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);  /* Adding a shadow for a more pronounced effect */
+}
+
 body.night-mode #leftkatagoricont {
     background-color: rgb(29, 38, 49);
 }
