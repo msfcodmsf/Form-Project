@@ -4,6 +4,7 @@
     <title>{{.Post.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="/static/wiewpost.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
     <script src="/static/scripts.js"></script>
@@ -23,53 +24,53 @@
         });
     </script>
     <script>
-        function vote(postID, commentID, voteType) {
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/vote", true);
+
+function prepare(xhr, method, url, callback) {
+            xhr.open(method, url, true);
             xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    callback(xhr);
+                }
+            };
+        }
+
+function vote(postID, commentID, voteType) {
+            var xhr = new XMLHttpRequest();
+            prepare(xhr, "POST", "/vote", function(xhr) {
+                if (xhr.status == 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        if (postID) {
+                            document.getElementById("post-like-count").innerText = response.like_count;
+                            document.getElementById("post-dislike-count").innerText = response.dislike_count;
+                        } else if (commentID) {
+                            document.getElementById("comment-like-count-" + commentID).innerText = response.like_count;
+                            document.getElementById("comment-dislike-count-" + commentID).innerText = response.dislike_count;
+                        }
+                    }
+                } else if (xhr.status == 401) {
+                    window.location.href = "/login";
+                } else {
+                    alert("Vote failed: " + xhr.responseText);
+                }
+            });
+
             var data = "vote_type=" + voteType;
             if (postID) {
                 data += "&post_id=" + postID;
             } else if (commentID) {
                 data += "&comment_id=" + commentID;
             }
-    
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState == 4) {
-                    if (xhr.status == 200) {
-                        var response = JSON.parse(xhr.responseText);
-                        if (response.redirect) {
-                            window.location.href = response.redirect;
-                        } else {
-                            if (postID) {
-                                document.getElementById("post-like-count").innerText = response.like_count;
-                                document.getElementById("post-dislike-count").innerText = response.dislike_count;
-                            } else if (commentID) {
-                                document.getElementById("comment-like-count-" + commentID).innerText = response.like_count;
-                                document.getElementById("comment-dislike-count-" + commentID).innerText = response.dislike_count;
-                            }
-                        }
-                    } else if (xhr.status == 401) {
-                        window.location.href = "/login";
-                    } else {
-                        alert("Vote failed: " + xhr.responseText);
-                    }
-                }
-            };
-    
+
             xhr.send(data);
         }
     </script>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script>
-$(document).ready(function(){
-    $('#bar_static').load('/static/bar.html');
-});
-</script>
 
-<html>
     <body>
         <div id="düzenbar">
     <div id="bar">
@@ -229,3 +230,6 @@ window.onclick = function (event) {
     </script>
 </body>
 </html>
+
+
+
