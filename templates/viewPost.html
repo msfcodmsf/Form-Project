@@ -8,6 +8,7 @@
 </head>
 <body>
     <script src="/static/scripts.js"></script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const themeToggle = document.getElementById("themeToggle");
@@ -23,9 +24,9 @@
             });
         });
     </script>
-    <script>
 
-function prepare(xhr, method, url, callback) {
+    <script>
+        function prepare(xhr, method, url, callback) {
             xhr.open(method, url, true);
             xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -36,7 +37,7 @@ function prepare(xhr, method, url, callback) {
             };
         }
 
-function vote(postID, commentID, voteType) {
+        function vote(postID, commentID, voteType) {
             var xhr = new XMLHttpRequest();
             prepare(xhr, "POST", "/vote", function(xhr) {
                 if (xhr.status == 200) {
@@ -58,48 +59,44 @@ function vote(postID, commentID, voteType) {
                     alert("Vote failed: " + xhr.responseText);
                 }
             });
-
-            var data = "vote_type=" + voteType;
-            if (postID) {
-                data += "&post_id=" + postID;
-            } else if (commentID) {
-                data += "&comment_id=" + commentID;
-            }
-
-            xhr.send(data);
+                var data = "vote_type=" + voteType;
+                if (postID) {
+                    data += "&post_id=" + postID;
+                } else if (commentID) {
+                    data += "&comment_id=" + commentID;
+                }
+                xhr.send(data);
         }
     </script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const theme = localStorage.getItem('theme');
+            if (theme) {
+                document.getElementById('theme-link').href = theme;
+            }
+        });
 
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const theme = localStorage.getItem('theme');
-        if (theme) {
+        function changeTheme(theme) {
             document.getElementById('theme-link').href = theme;
+            localStorage.setItem('theme', theme);
         }
-    });
-
-    function changeTheme(theme) {
-        document.getElementById('theme-link').href = theme;
-        localStorage.setItem('theme', theme);
-    }
-</script>
+    </script>
 
     <body>
-        <div id="düzenbar">
-    <div id="bar">
-        <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
+    <div id="düzenbar">
+        <div id="bar">
+            <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
 
-        <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
-        <div id="darkmod">
-            <span class="theme-mode">
-                <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
-                  <i id="themeIcon" class="fas fa-sun"></i></a> 
-            </span>
+            <input type="text" id="searchBox"  placeholder="Arama Yapınız" onkeyup="searchLanguages()">
+            <div id="darkmod">
+                <span class="theme-mode">
+                    <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
+                    <i id="themeIcon" class="fas fa-sun"></i></a> 
+                </span>
+            </div>
         </div>
     </div>
-</div>
     <div id="görünmezbar"></div>
     <div id="center">
         <div id="centercont">
@@ -124,6 +121,11 @@ function vote(postID, commentID, voteType) {
                 <div id="dislike">
                     <button onclick="vote('{{.Post.ID}}', null, -1)"><img src="/static/png/dislike.png" alt="Dislike"></button>
                 </div>
+                <!-- Gönderi silme formu -->
+                <form action="/deletePost" method="post">
+                    <input type="hidden" name="post_id" value="{{.Post.ID}}">
+                    <button type="submit">Delete Post</button>
+                </form>
             </div>
         </div>
 
@@ -147,6 +149,11 @@ function vote(postID, commentID, voteType) {
                 <div id="dislike">
                     <button onclick="vote(null, '{{.ID}}', -1)"><img src="/static/png/dislike.png" alt="Dislike"></button>
                 </div>
+                <!-- Yorum silme formu -->
+                <form action="/deleteComment" method="post">
+                    <input type="hidden" name="comment_id" value="{{.ID}}">
+                    <button type="submit">Delete Comment</button>
+                </form>
             </div>
         </div>
         {{end}}
@@ -171,6 +178,7 @@ function vote(postID, commentID, voteType) {
             </div>
         </div>
     </div>
+
     <script>
         let tema = localStorage.getItem("theme") ?? "white"
         changeTema();
@@ -183,8 +191,6 @@ function vote(postID, commentID, voteType) {
             changeTema();
         });
     </script>
+
 </body>
 </html>
-
-
-

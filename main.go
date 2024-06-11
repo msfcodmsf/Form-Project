@@ -94,6 +94,8 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
+	http.HandleFunc("/deletePost", deletePostHandler)
+	http.HandleFunc("/deleteComment", deleteCommentHandler)
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
@@ -173,6 +175,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 				FROM posts
 				JOIN users ON posts.user_id = users.id
 				LEFT JOIN votes ON votes.post_id = posts.id
+				WHERE posts.deleted = 0
 				GROUP BY posts.id
 				ORDER BY posts.created_at DESC`
 
@@ -309,7 +312,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		sessionToken := uuid.New().String()
-		expiresAt := time.Now().Add(30 * time.Minute)
+		expiresAt := time.Now().Add(10 * time.Minute)
 
 		_, err = db.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
 		if err != nil {
@@ -408,12 +411,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 
 func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	if session == nil {
+	if err != nil || session == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
@@ -437,6 +435,81 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%s", postID), http.StatusSeeOther)
 		return
 	}
+}
+
+func deletePostHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.FormValue("post_id")
+	if postID == "" {
+		http.Error(w, "Post ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var userID int
+	err = db.QueryRow("SELECT user_id FROM posts WHERE id = ?", postID).Scan(&userID)
+	if err != nil {
+		handleErr(w, err, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	if userID != session.UserID {
+		http.Error(w, "You can only delete your own posts", http.StatusForbidden)
+		return
+	}
+
+	_, err = db.Exec("UPDATE posts SET deleted = 1 WHERE id = ?", postID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.FormValue("comment_id")
+	if commentID == "" {
+		http.Error(w, "Comment ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var userID, postID int
+	err = db.QueryRow("SELECT user_id, post_id FROM comments WHERE id = ?", commentID).Scan(&userID, &postID)
+	if err != nil {
+		handleErr(w, err, "Comment not found", http.StatusNotFound)
+		return
+	}
+
+	var postOwnerID int
+	err = db.QueryRow("SELECT user_id FROM posts WHERE id = ?", postID).Scan(&postOwnerID)
+	if err != nil {
+		handleErr(w, err, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	if userID != session.UserID && postOwnerID != session.UserID {
+		http.Error(w, "You can only delete your own comments or comments on your posts", http.StatusForbidden)
+		return
+	}
+
+	_, err = db.Exec("UPDATE comments SET deleted = 1 WHERE id = ?", commentID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
 }
 
 func voteHandler(w http.ResponseWriter, r *http.Request) {
@@ -593,7 +666,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 						FROM posts
 						JOIN users ON posts.user_id = users.id
 						LEFT JOIN votes ON votes.post_id = posts.id
-						WHERE posts.id = ?
+						WHERE posts.id = ? AND posts.deleted = 0
 						GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
@@ -617,7 +690,7 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 							FROM comments
 							JOIN users ON comments.user_id = users.id
 							LEFT JOIN votes ON votes.comment_id = comments.id
-							WHERE comments.post_id = ?
+							WHERE comments.post_id = ? AND comments.deleted = 0
 							GROUP BY comments.id`, postID)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
