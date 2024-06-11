@@ -71,6 +71,21 @@ function vote(postID, commentID, voteType) {
     </script>
 
 
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const theme = localStorage.getItem('theme');
+        if (theme) {
+            document.getElementById('theme-link').href = theme;
+        }
+    });
+
+    function changeTheme(theme) {
+        document.getElementById('theme-link').href = theme;
+        localStorage.setItem('theme', theme);
+    }
+</script>
+
     <body>
         <div id="düzenbar">
     <div id="bar">
@@ -156,77 +171,17 @@ function vote(postID, commentID, voteType) {
             </div>
         </div>
     </div>
-
-
-    
-
     <script>
-        function addModalEventListeners() {
-    // Login butonuna event listener ekle
-    var loginBtn = document.querySelector('a[href="/login"]'); 
-    if (loginBtn) {
-        loginBtn.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal('loginModal');
+        let tema = localStorage.getItem("theme") ?? "white"
+        changeTema();
+
+        document.querySelector("#themeToggle").addEventListener("click", () => {
+            if (tema === "white") tema = "black";
+            else tema = "white";
+            
+            localStorage.setItem("tema", tema);
+            changeTema();
         });
-    }
-
-    // Register butonuna event listener ekle
-    var registerBtn = document.querySelector('a[href="/register"]');
-    if (registerBtn) {
-        registerBtn.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal('registerModal');
-        });
-    }
-
-    // Logout butonuna event listener ekle
-    var logoutBtn = document.querySelector('a[href="/logout"]');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal('logoutModal');
-        });
-    }
-
-    // Create Post butonuna event listener ekle
-    var createPostBtn = document.querySelector('a[onclick="openModal(\'createPostModal\')"]');
-    if (createPostBtn) {
-        createPostBtn.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal('createPostModal');
-        });
-    }
-}
-
-// Modal açma fonksiyonu
-function openModal(modalId) {
-  var modal = document.getElementById(modalId);
-  modal.style.display = 'block';
-  modal.querySelector('.modal-content').style.bottom = '10%'; // Slide up animation
-  modal.querySelector('.modal-content').style.opacity = '1';
-}
-
-function closeModal(modalId) {
-  var modal = document.getElementById(modalId);
-  modal.querySelector('.modal-content').style.bottom = '-100%'; // Slide down animation
-  modal.querySelector('.modal-content').style.opacity = '0';
-  setTimeout(function() {
-    modal.style.display = 'none';
-    addModalEventListeners(); 
-  }, 500); // Match transition duration
-}
-
-// Initial Setup
-window.onload = function () {
-  addModalEventListeners();
-};
-
-window.onclick = function (event) {
-  if (event.target.classList.contains('modal')) {
-    closeModal(event.target.id);
-  }
-};
     </script>
 </body>
 </html>

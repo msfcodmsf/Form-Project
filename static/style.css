@@ -562,3 +562,13 @@ body.night-mode canvas {
 textarea {
     resize: none;
 }
+
+body.light-mode #popup {
+    background-color: rgb(239, 242, 246);
+    color: black;
+}
+
+body.night-mode #popup {
+    background-color: rgb(29, 38, 49);
+    color: white;
+}

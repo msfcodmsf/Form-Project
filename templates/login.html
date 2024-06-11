@@ -14,6 +14,14 @@
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
+        body.night-mode {
+            background-color: rgb(20, 25, 31);
+            color: white;
+        }
+        body.night-mode .login-container {
+            background-color: rgb(29, 38, 49);
+            color: white;
+        }
         .login-container {
             position: relative;
             background-color: #fff;
@@ -45,6 +53,7 @@
             display: block;
             margin-bottom: 5px;
             text-align: center;
+            font-weight: bold;
         }
         input[type="email"],
         input[type="password"] {
@@ -75,19 +84,33 @@
     </style>
 </head>
 <body>
+    <script src="/static/scripts.js"></script>
     <div class="login-container" id="login-container">
         <button class="close-btn" onclick="closeLogin()">×</button>
         <h1>Login</h1>
         <form action="/login" method="post">
-            <label for="email">Email:</label>
+            <label for="email">Email</label>
             <input type="email" id="email" name="email" required>
-            <label for="password">Password:</label>
+            <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
             <button type="submit">Login</button>
         </form>
+        <br>
+        <button id="themeToggle">Toggle Theme</button> 
     </div>
 
     <script>
+   // Sayfa yüklendiğinde temayı ayarla
+   window.onload = function() {
+            let tema = localStorage.getItem("tema") || "light"; // index.html ile aynı varsayılanı kullanıyoruz.
+            document.body.classList.add(tema + "-mode"); // Varsa "light-mode" veya "dark-mode" ekle
+        };
+
+        // Tema değiştirme düğmesini index.html ile aynı şekilde dinle
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
+            changeTheme(currentTheme);
+        });
         function closeLogin() {
             window.location.href = 'index.html';
         }

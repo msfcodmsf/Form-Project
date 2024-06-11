@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
+        
+        .profile-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 400px; /* Biraz daha büyük */
+            text-align: center;
+        }
+        
+        .profile-picture {
+            width: 150px; /* Profil fotoğrafını büyüt */
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+        
+        .profile-info {
+            margin-bottom: 20px;
+        }
+        
+        .profile-info p {
+            margin: 5px 0;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        
+        .profile-stats div {
+            text-align: center;
+        }
+        </style>
+</head>
+<body>
+    <div class="profile-container">
+        <img src="liyan_profil.jpg" alt="Liyan Profil Fotoğrafı" class="profile-picture">
+        <h2>Liyan</h2>
+        <div class="profile-info">
+            <p><strong>Decapat:</strong> 39</p>
+            <p><strong>Katılım:</strong> 11 Nisan 2022</p>
+            <p><strong>Son Etkinlik:</strong> Az Önce (Üye profilini görüntülüyor Liyan)</p>
+        </div>
+        <div class="profile-stats">
+            <div>
+                <p><strong>Mesajlar</strong></p>
+                <p>10</p>
+            </div>
+            <div>
+                <p><strong>Beğeniler</strong></p>
+                <p>2</p>
+            </div>
+            <div>
+                <p><strong>Puanlar</strong></p>
+                <p>768</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
