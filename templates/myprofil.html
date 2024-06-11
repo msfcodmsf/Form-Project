@@ -8,62 +8,74 @@
         body {
             font-family: sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100%;
             width: 100%;
             background-color: #f4f4f4;
+            margin: 0;
         }
-        
+
         .profile-container {
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            height: 100%;
-            width: 50%; /* Biraz daha büyük */
+            height: 40%;
+            width: 50%;
             text-align: center;
+            margin-bottom: 10px; /* Boşluk eklendi */
         }
-        
+
         .profile-picture {
-            width: 150px; /* Profil fotoğrafını büyüt */
+            width: 150px;
             height: 150px;
             border-radius: 50%;
             object-fit: cover;
             margin-bottom: 20px;
         }
-        
+
         .profile-info {
             margin-bottom: 20px;
         }
-        
+
         .profile-info p {
             margin: 5px 0;
         }
-        
+
         .profile-stats {
             display: flex;
             justify-content: space-around;
             border-top: 1px solid #ddd;
             padding-top: 20px;
         }
-        
+
         .profile-stats div {
             text-align: center;
         }
 
-        #left {
-            height: 100%;
-            width: 25%;
-            background-color: #af0e0e;
+        #bilgibar {
+            height: 10%;
+            width: 50%;
+            background-color: #641515;
         }
-        </style>
+        #bilgibarcont {
+            height: 100%;
+            width: 20%;
+            background-color: #16d6da;
+            color: black;
+            text-align: center;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+            float: left;
+            margin-left: 8%;
+            margin-right: 5%;
+        }
+        
+    </style>
 </head>
 <body>
-    <div id="left">
-        <img src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı" class="profile-picture">
-        <a href="/logout" class="button">Log Out</a>
-    </div>
     <div class="profile-container">
+        <img src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı" class="profile-picture">
         <h2>Liyan</h2>
         <div class="profile-info">
             <p><strong>Decapat:</strong> 39</p>
@@ -84,6 +96,11 @@
                 <p>768</p>
             </div>
         </div>
+    </div>
+    <div id="bilgibar">
+        <div id="bilgibarcont">Yaptığı Yorumlar</div>
+        <div id="bilgibarcont">Çözüm bulduğu postlar</div>
+        <div id="bilgibarcont">Takip ettiği konular </div>
     </div>
 </body>
 </html>

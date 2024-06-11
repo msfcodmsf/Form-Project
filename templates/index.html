@@ -134,13 +134,15 @@
                         <ul><li> {{.CreatedAtFormatted}} </li></ul>
                     </div>
                     <div id="centersorukatagori">
+                        <!-- Gönderi silme formu -->
+                        <form id="deletePostForm" action="/deletePost" method="post">
+                            <input type="hidden" name="post_id" value="{{.ID}}">
+                            <button type="submit">
+                                <img src="/static/png/delete.png" alt="Delete">
+                            </button>
+                        </form>
                         <p>Kategori</p>
                     </div>
-                    <!-- Gönderi silme formu -->
-                    <form action="/deletePost" method="post">
-                        <input type="hidden" name="post_id" value="{{.ID}}">
-                        <button type="submit">Delete Post</button>
-                    </form>
             </div>
             {{end}}
        </div> 
