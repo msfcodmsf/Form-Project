@@ -10,7 +10,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100%;
+            width: 100%;
             background-color: #f4f4f4;
         }
         
@@ -18,8 +19,8 @@
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            width: 400px; /* Biraz daha büyük */
+            height: 100%;
+            width: 50%; /* Biraz daha büyük */
             text-align: center;
         }
         
@@ -49,11 +50,20 @@
         .profile-stats div {
             text-align: center;
         }
+
+        #left {
+            height: 100%;
+            width: 25%;
+            background-color: #af0e0e;
+        }
         </style>
 </head>
 <body>
+    <div id="left">
+        <img src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı" class="profile-picture">
+        <a href="/logout" class="button">Log Out</a>
+    </div>
     <div class="profile-container">
-        <img src="liyan_profil.jpg" alt="Liyan Profil Fotoğrafı" class="profile-picture">
         <h2>Liyan</h2>
         <div class="profile-info">
             <p><strong>Decapat:</strong> 39</p>

@@ -97,6 +97,7 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
+	http.HandleFunc("/myprofil", myProfileHandler) 
 
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
@@ -653,6 +654,24 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error executing template:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func myProfileHandler(w http.ResponseWriter, r *http.Request) {
+    session, err := getSession(r)
+    if err != nil || session == nil { // Check session explicitly
+        http.Redirect(w, r, "/login", http.StatusSeeOther) 
+        return
+    }
+
+    // Optionally, fetch user data from the database based on session.UserID
+    // and pass it to the template
+
+    tmpl, err := template.ParseFiles("templates/myprofil.html")
+    if err != nil {
+        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+    tmpl.Execute(w, nil) // Pass user data if fetched
 }
 
 func getSession(r *http.Request) (*Session, error) {
