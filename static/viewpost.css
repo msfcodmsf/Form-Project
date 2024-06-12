@@ -235,8 +235,15 @@ border-radius: 0px 10px 10px 0px;
   margin-bottom: 2%;
   background-color: black;
   color: white;
-  
+
 }
+.styled-textarea {
+  font-weight: bold; /* Kalın yazı */
+  font-style: italic; /* İtalik yazı */
+  font-family: Arial, sans-serif; /* İtalyan yazı */
+  /* Buraya istediğiniz diğer stil özelliklerini ekleyebilirsiniz */
+}
+
 
 
 

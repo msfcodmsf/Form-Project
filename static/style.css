@@ -349,7 +349,7 @@ body.night-mode .button:hover {
     background-color: var(--button-hover-color);
 }
 body.night-mode li a:hover, .menu:hover {
-    color: #bb7513;
+    color: rgb(22, 59, 97);
 }
 body.night-mode #leftkatagoricont {
     background-color: rgb(29, 38, 49);
@@ -376,7 +376,14 @@ body.night-mode #searchBox {
 body.night-mode #centersorubaslik,
 body.night-mode #centerprofilcont,
 body.night-mode #centerlike,
+body.night-mode #mesajlasmaAlani,
+body.night-mode #mesajGonder,
+body.night-mode #mesajMetni,
+body.night-mode #mesajGirisi,
 body.night-mode #filtre,
+body.night-mode #mesajlasmaBaslik,
+body.night-mode #mesajlardaAra,
+body.night-mode #mesajListesi,
 body.night-mode #leftkatagoricont,
 body.night-mode #centersorukatagori,
 body.night-mode ul,
@@ -459,4 +466,137 @@ button:hover {
 }
 textarea {
     resize: none;
+}
+
+/* Mesajlaşma Alanı */
+#mesajlasmaAlani {
+    width: 400px; /* Genişlik */
+    height: 500px; /* Yükseklik */
+    position: fixed;
+    top: 50%;
+    right: 1%;
+    background-color: white;
+    border: 1px solid #e1e2e3; /* Çerçeve rengi */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+/* Mesajlaşma Başlığı */
+#mesajlasmaBaslik {
+    background-color: #f5f6f7; /* Açık gri arkaplan */
+    padding: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex; /* Başlık ve arama kutusunu yan yana yerleştir */
+    align-items: center;
+    justify-content: space-between; /* Elemanlar arasına boşluk ekle */
+}
+
+#mesajlasmaBaslik h3 {
+    margin: 0;
+}
+
+/* Mesaj Arama Kutusu */
+#mesajlardaAra {
+    width: 180px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+/* Mesaj Listesi */
+#mesajListesi {
+    padding: 10px;
+}
+
+/* Mesajlar */
+.mesaj {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start; /* Mesaj içeriğini yukarıya hizala */
+}
+
+/* Profil Resmi */
+.mesaj .profilResmi {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+/* Mesaj İçeriği */
+.mesaj .mesajIcerik {
+    background-color: #e4a40e;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 14px;
+    max-width: 70%; /* Mesajın çok uzun olmaması için */
+    word-wrap: break-word; /* Kelimelerin satır sonunda kesilmesini sağlar */
+}
+/* Gönderilen Mesaj */
+.mesaj.ben .mesajIcerik {
+    background-color: #14c15f;
+    color: black;
+    align-self: flex-end; /* Gönderilen mesajları sağa yasla */
+}
+/* Mesaj Tarihi */
+.mesaj .mesajTarihi {
+    font-size: 12px;
+    color: black;
+    margin-top: 5px;
+    align-self: flex-end; /* Tarihi mesaj içeriğiyle aynı hizaya getir */
+}
+/* Mesaj Girişi */
+#mesajGirisi {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    position: absolute;
+    bottom: 0;
+    width: 97%;
+    background-color: #f5f6f7;
+    border-top: 1px solid #e1e2e3;
+}
+
+#mesajMetni {
+    flex-grow: 1;
+    margin-right: 5px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    height: 36px; /* Metin alanı yüksekliği */
+}
+
+#mesajGonder {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Diğer ve Odaklı Sekmeleri */
+#mesajlasmaAlani #filtrecont {
+    display: flex;
+    justify-content: space-around; /* Sekmeleri eşit aralıklarla dağıt */
+    padding: 10px;
+    border-bottom: 1px solid #e1e2e3;
+}
+
+#mesajlasmaAlani #filtre {
+    background-color: transparent; /* Arkaplan rengini kaldır */
+    border: none;
+    padding: 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#mesajlasmaAlani #filtre.aktif { /* Aktif sekme için stil */
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
 }

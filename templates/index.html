@@ -137,10 +137,8 @@
                 </div>
                     <div id="centersorubaslik">
                         <ul><li> <h3><a href="/viewPost?id={{.ID}}">{{.Title}}</a></h3> </li></ul>
-                        <div id="centerlike">
-                             <ul><li> {{.LikeCount}} Likes {{.DislikeCount}} Dislikes</li></ul>
-                        </div>   
-                        <ul><li> {{.CreatedAtFormatted}} </li></ul>
+                             <ul><li> {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes  </li></ul>
+
                     </div>
                     <div id="centersorukatagori">
                         <!-- Gönderi silme formu -->
@@ -156,6 +154,31 @@
             {{end}}
        </div> 
     </div>
+
+    <div id="mesajlasmaAlani">
+        <div id="mesajlasmaBaslik">
+            <h3>Mesajlaşma</h3>
+            <input type="text" id="mesajlardaAra" placeholder="Mesajlarda ara...">
+        </div>
+        <div id="mesajListesi">
+            <div class="mesaj ben">
+                <img src="/static/png/pp.png" alt="Profil Resmi" class="profilResmi">
+                <div class="mesajIcerik">Merhaba, nasılsın?</div>
+                <div class="mesajTarihi">12:30</div>
+            </div>
+            <div class="mesaj diger">
+                <img src="/static/png/pp2.png" alt="Profil Resmi" class="profilResmi">
+                <div class="mesajIcerik">İyiyim, sen nasılsın?</div>
+                <div class="mesajTarihi">12:32</div>
+            </div>
+            </div>
+        <div id="mesajGirisi">
+            <textarea id="mesajMetni"></textarea>
+            <button id="mesajGonder">Gönder</button>
+        </div>
+    </div>
+    
+    
     <!-- Harici script dosyaları -->
     <script src="/static/scripts.js"></script>
     <!-- Tema değiştirme script'i -->
@@ -189,6 +212,39 @@
                 // İşlemi durdurmak için gerekli değil, sadece bir geri bildirim olarak eklenir
             }
         });
+    </script>
+    <script>
+        const mesajListesi = document.getElementById("mesajListesi");
+
+function mesajEkle(mesaj, gonderen) {
+    const mesajDiv = document.createElement("div");
+    mesajDiv.classList.add("mesaj", gonderen === "ben" ? "ben" : "diger");
+
+    const profilResmi = document.createElement("img");
+    profilResmi.src = gonderen === "ben" ? "/static/png/pp.png" : "/static/png/pp2.png";
+    profilResmi.alt = "Profil Resmi";
+    profilResmi.classList.add("profilResmi");
+
+    const mesajIcerik = document.createElement("div");
+    mesajIcerik.classList.add("mesajIcerik");
+    mesajIcerik.textContent = mesaj;
+
+    const mesajTarihi = document.createElement("div");
+    mesajTarihi.classList.add("mesajTarihi");
+    mesajTarihi.textContent = "şimdi"; // Örnek olarak "şimdi" yazıldı
+
+    mesajDiv.appendChild(profilResmi);
+    mesajDiv.appendChild(mesajIcerik);
+    mesajDiv.appendChild(mesajTarihi);
+
+    mesajListesi.appendChild(mesajDiv);
+    mesajListesi.scrollTop = mesajListesi.scrollHeight; // En alta scroll yap
+}
+// Örnek mesajlar (rastgele ekleyebilirsiniz)
+mesajEkle("Merhaba, nasılsın? aşko", "ben");
+mesajEkle("İyiyim, sen nasılsın? bitanem", "diger");
+mesajEkle("Ben de iyiyim, teşekkürler. 💅🏻💅🏻💅🏻", "ben");
+
     </script>
     
 </body>
