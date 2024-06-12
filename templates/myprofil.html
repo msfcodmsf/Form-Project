@@ -16,6 +16,14 @@
             background-color: #f4f4f4;
             margin: 0;
         }
+        body.night-mode {
+            background-color: rgb(20, 25, 31);
+            color: white;
+        }
+        body.night-mode .profile-container {
+            background-color: rgb(29, 38, 49);
+            color: white;
+        }
 
         .profile-container {
             background-color: #fff;
@@ -95,12 +103,30 @@
                 <p><strong>Puanlar</strong></p>
                 <p>768</p>
             </div>
-        </div>
+            
+        </div><button id="themeToggle">Toggle Theme</button> 
     </div>
     <div id="bilgibar">
         <div id="bilgibarcont">Yaptığı Yorumlar</div>
         <div id="bilgibarcont">Çözüm bulduğu postlar</div>
         <div id="bilgibarcont">Takip ettiği konular </div>
     </div>
+    <script src="/static/scripts.js"></script>
+    <script>
+        // Sayfa yüklendiğinde temayı ayarla
+        window.onload = function() {
+                 let tema = localStorage.getItem("tema") || "light"; // index.html ile aynı varsayılanı kullanıyoruz.
+                 document.body.classList.add(tema + "-mode"); // Varsa "light-mode" veya "dark-mode" ekle
+             };
+     
+             // Tema değiştirme düğmesini index.html ile aynı şekilde dinle
+             document.getElementById('themeToggle').addEventListener('click', function() {
+                 const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
+                 changeTheme(currentTheme);
+             });
+             function closeLogin() {
+                 window.location.href = 'index.html';
+             }
+         </script>
 </body>
 </html>
