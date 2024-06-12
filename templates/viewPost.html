@@ -11,8 +11,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
-    <!-- Düzen barı -->
-    <div id="düzenbar">
+    <!-- Üst Çubuk-->
+    <div id="bigbar">
+        <div id="düzenbar">
         <div id="bar">
             <!-- Logo -->
             <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
@@ -27,12 +28,16 @@
                     <i id="themeIcon" class="fas fa-sun"></i></a> 
                 </span>
             </div>
+            <div id="girişbar">
+                <div id="myprofil">
+                    <a href="/myprofil"><img width="80%" height="100%" src="/static/png/pp.png"></a>
+                </div>
+            </div>
         </div>
     </div>
-    
+    </div>
     <!-- Görünmez bar -->
     <div id="görünmezbar"></div>
-    
     <!-- Merkez alanı -->
     <div id="center">
         <div id="centercont">
@@ -51,10 +56,9 @@
                 <div class="text-block">
                     <p>{{.Post.Content}}</p>
                 </div>
-                <!-- Gönderi oluşturulma tarihi -->
-                <p>{{.Post.CreatedAtFormatted}}</p>
-                <!-- Beğeni ve beğenmeme sayıları -->
-                <p>Likes: <span id="post-like-count">{{.Post.LikeCount}}</span> Dislikes: <span id="post-dislike-count">{{.Post.DislikeCount}}</span></p>
+                <!-- Gönderi oluşturulma tarihi --><!-- Beğeni ve beğenmeme sayıları -->
+                <p>{{.Post.CreatedAtFormatted}} Likes: <span id="post-like-count">{{.Post.LikeCount}}</span> Dislikes: <span id="post-dislike-count">{{.Post.DislikeCount}}</span></p>
+                
                 <!-- Beğeni ve beğenmeme düğmeleri -->
                 <div id="like">
                     <button onclick="vote('{{.Post.ID}}', null, 1)"><img src="/static/png/like.png" alt="Like"></button>
@@ -63,9 +67,11 @@
                     <button onclick="vote('{{.Post.ID}}', null, -1)"><img src="/static/png/dislike.png" alt="Dislike"></button>
                 </div>
                 <!-- Gönderi silme formu -->
-                <form action="/deletePost" method="post">
+                <form id="deletePostForm" action="/deletePost" method="post">
                     <input type="hidden" name="post_id" value="{{.Post.ID}}">
-                    <button type="submit">Delete Post</button>
+                    <button type="submit">
+                        <img src="/static/png/delete.png" alt="Delete">
+                    </button>
                 </form>
             </div>
         </div>
@@ -96,9 +102,11 @@
                     <button onclick="vote(null, '{{.ID}}', -1)"><img src="/static/png/dislike.png" alt="Dislike"></button>
                 </div>
                 <!-- Yorum silme formu -->
-                <form action="/deleteComment" method="post">
+                <form id="deletePostForm" action="/deleteComment" method="post">
                     <input type="hidden" name="comment_id" value="{{.ID}}">
-                    <button type="submit">Delete Comment</button>
+                    <button type="submit">
+                        <img src="/static/png/delete.png" alt="Delete">
+                    </button>
                 </form>
             </div>
         </div>

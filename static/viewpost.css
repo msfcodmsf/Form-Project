@@ -16,24 +16,63 @@ html, body {
   --button-hover-color: #c86a12;
 }
 
+/* Genel olarak kaydırma çubuğuna stillendirme uygulama */
+::-webkit-scrollbar {
+  width: 12px; /* Kaydırma çubuğu genişliği */
+}
 
-/**Like, Dislike buttons**/
-#like, button {
+/* Kaydırma çubuğunun track kısmının rengi */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+
+/* Kaydırma çubuğunun thumb kısmını yuvarlak yapma */
+::-webkit-scrollbar-thumb {
+  background: #007bff; /* Thumb rengi */
+  border-radius: 6px; /* Yuvarlak köşeler */
+}
+
+/* Kaydırma çubuğunun thumb kısmının üzerine gelindiğindeki rengini değiştirme */
+::-webkit-scrollbar-thumb:hover {
+  background: #0056b3; /* Thumb üzerine gelindiğindeki renk */
+}
+
+
+/**Like, Dislike, DeletePostForm buttons**/
+/* DeletePostForm ve diğer butonlar için stil */
+#deletePostForm button,
+#like button,
+#dislike button {
+  padding: 2px 2px; /* Yükseklik ve genişlik */
+  margin: 1px; /* Butonlar arasındaki boşluk */
+  border: none; /* Kenar çizgisi yok */
+  border-radius: 5px; /* Yumuşak köşeler */
+  cursor: pointer; /* İmleci el işareti yap */
+  transition: background-color 0.3s; /* Arka plan renginin değişme süresi */
+  display: inline-block; /* Yan yana yerleştirme */
   float: left;
-  padding: 5px 5px;
-  border-radius: 5px;
+}
+#deletePostForm button {
+  padding-left: 10px;
+}
+/* DeletePostForm ve diğer butonlar için hover efekti */
+#deletePostForm button:hover,
+#like button:hover,
+#dislike button:hover {
+  background-color: #007bff; /* Buton üzerine gelindiğinde arka plan rengi */
+  color: white; /* Metin rengi */
+}
+#deletePostForm button:hover {
+  background-color: black; /* Buton üzerine gelindiğinde arka plan rengi */
+  color: white; /* Metin rengi */
 }
 #like button:hover {
-  background-color: rgb(123, 216, 232);
-  transition-duration: 1.2s;
-}
-#dislike, button {
-  border-radius: 5px;
-  padding: 5px 5px;
+  background-color: rgb(123, 216, 232); /* Buton üzerine gelindiğinde arka plan rengi */
+  color: white; /* Metin rengi */
 }
 #dislike button:hover {
-  background-color: red;
-  transition-duration: 1.2s;
+  background-color: rgb(239, 60, 60); /* Buton üzerine gelindiğinde arka plan rengi */
+  color: white; /* Metin rengi */
 }
 
 #submit {
@@ -55,6 +94,14 @@ html, body {
   position: fixed;
   z-index: 1;
 }
+#bigbar{
+  width: 99.1%;
+  height: 6%;
+  display: flex;
+  position: fixed;
+  z-index: 1;
+  background-color: #163b61;
+}
 #bar {
   width: 100%;
   height: 100%;
@@ -69,12 +116,27 @@ html, body {
   width: 25%;
   height: 100%;
   margin-left: 27%;
-  padding-top: 5px;
+  padding-top: 1px;
+  margin-top: 1%;
+}
+#myprofil {
+  width: 50px; /* Profil resminin genişliği */
+  height: 50px; /* Profil resminin yüksekliği */
+  border-radius: 50%; /* Resmi yuvarlak yapar */
+  overflow: hidden; /* Resmin sınırlarını yuvarlak yapar */
+  cursor: pointer; /* İmlecin üstüne geldiğinde el işareti görüntüler, tıklanabilir hale getirir */
+  float: left; /* Profil resmini sola kaydırır */
+  margin-right: 10px; /* Profil resmi ile "Log Out" bağlantısı arasında boşluk bırakır */
+  margin-top: -5px;
+}
+#myprofil img {
+  width: 100%; /* Resmi konteynerin genişliğine uygun olarak ayarlar */
+  height: auto; /* Orantılı olarak yüksekliği ayarlar */
 }
 #searchBox {
   width: 40%; /* Tam genişlik */
   height: 65%;
-  margin-top: 5px;
+ margin-top: 1%;
 }
 
 /**CENTER CONTAINER**/
@@ -89,8 +151,19 @@ html, body {
   max-width: 100%; /* Centercont'un maksimum genişliğini belirler */
   margin-top: 2%;
   background-color: rgb(239, 242, 246);
-  border-radius: 10px 0 0 10px;
+  border-radius: 10px 10px 10px 10px;
   display: inline-block; /* İçeriğe göre boyutunu ayarla */
+  position: relative; /* Mutlaka bu özelliği ekleyin */
+  padding-left: 2px; /* Çizgiyi içeriğin başlangıcından itibaren ayarlayın */
+}
+#centercont::before {
+  content: "";
+  width: 1px; /* Çizgi kalınlığı */
+  height: 100%; /* Öğenin yüksekliği kadar */
+  background-color: #000; /* Çizgi rengi */
+  position: absolute;
+  left: 17%; /* İstediğiniz yere göre ayarlayın */
+  top: 0;
 }
 .text-block {/* Metin bloğu stilleri */
   overflow-wrap: break-word; /* Modern tarayıcılar için */
@@ -113,7 +186,6 @@ float: left;
 background-color:rgb(239, 242, 246);
 color: black;
 border-radius: 10px 0 0 10px;
-border: 1px solid blue;
 }
 #name {
   width: 100%;
@@ -163,11 +235,15 @@ border-radius: 0px 10px 10px 0px;
   margin-bottom: 2%;
   background-color: black;
   color: white;
+  
 }
+
+
 
 /**Night Mode**/
 body.night-mode #centerprofilcont,
 body.night-mode #centercont,
+body.night-mode button,
 body.night-mode textarea,
 body.night-mode #centersorubaslik {
   background-color:rgb(29, 38, 49);
@@ -214,21 +290,16 @@ body.night-mode {
   width: 3%;
   height: 70%;
   margin-left: 5%;
-  padding-top: 10px;
+  margin-top: 1%;
+  padding-top: 7px;
   padding-left: 5px;
 }
 
-.container {
-  width: 80%;
-  margin: 20px auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-}
+
 
 img {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
   float: left;
   margin-right: 10px;
 }
@@ -240,18 +311,5 @@ input, select, textarea {
 }
 textarea {
   resize: none;
-}
-
-#editor {
-  width: 100%;
-  height: 200px; /* İstediğiniz yüksekliği ayarlayabilirsiniz */
-  margin: 10px 0;
-  resize: none;
-}
-
-.cke_contents { /* CKEditor içeriğinin bulunduğu div'e stil uygulayın */
-  resize: none; /* Yeniden boyutlandırmayı devre dışı bırakın */
-  height: 300px; /* İstediğiniz sabit yüksekliği belirleyin */
-  /* Diğer stil özellikleri (genişlik, kenarlık vb.) */
 }
 

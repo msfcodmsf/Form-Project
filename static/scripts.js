@@ -43,79 +43,79 @@ function searchLanguages() {
     const input = document.getElementById('searchBox');
     const filter = input.value.toLowerCase();
     const nodes = document.getElementsByClassName('post');
-
-     // Arama sonuçlarını filtrele ve göster
+  
+    // Arama sonuçlarını filtrele ve g�ster
     for (let i = 0; i < nodes.length; i++) {
-        if (nodes[i].innerText.toLowerCase().includes(filter)) {
-            nodes[i].style.display = "flex";
-        } else {
-            nodes[i].style.display = "none";
-        }
+      if (nodes[i].innerText.toLowerCase().includes(filter)) {
+        nodes[i].style.display = "flex";
+      } else {
+        nodes[i].style.display = "none";
+      }
     }
-}
-
-
-// Dil arama fonksiyonu (diğer versiyon)
-const languages = ["Python", "JavaScript", "Java", "C#", "C++", "PHP", "Ruby", "Swift", "Go", "Kotlin", "Rust"];
-const searchBox = document.getElementById('searchBox');
-const resultsContainer = document.getElementById('resultsContainer');
-const selectedLanguages = [];
-const selectedLanguagesSet = new Set();
-const selectedLanguagesContainer = document.getElementById('selectedLanguagesContainer');
-const selectedLanguagesList = document.getElementById('selectedLanguagesList');
-const clearButton = document.getElementById('clearButton');
-
-// Dil arama fonksiyonu (filtreleme ve sonuçları gösterme)
-function searchLanguages() {
+  }
+  
+  const selectedLanguages = [];
+  const selectedLanguagesSet = new Set();
+  const selectedLanguagesContainer = document.getElementById('selectedLanguagesContainer');
+  
+  // Dil arama fonksiyonu (filtreleme ve sonuçları g�sterme)
+  function searchLanguages() {
     const searchTerm = searchBox.value.toLowerCase();
     const filteredLanguages = languages.filter(lang => 
-        lang.toLowerCase().includes(searchTerm) && !selectedLanguages.includes(lang) // Seçilmemiş dilleri filtrele
+      lang.toLowerCase().includes(searchTerm) && !selectedLanguages.includes(lang) // Seçilmemiş dilleri filtrele
     );
-    // Sonuçları göster
+    // Sonuçları g�ster
     resultsContainer.innerHTML = '';
     filteredLanguages.forEach(lang => {
-        const listItem = document.createElement('li');
-        listItem.textContent = lang;
-        listItem.onclick = () => selectLanguage(lang);
-        resultsContainer.appendChild(listItem);
+      const listItem = document.createElement('li');
+      listItem.textContent = lang;
+      listItem.onclick = () => selectLanguage(lang);
+      resultsContainer.appendChild(listItem);
     });
-}
-
-// Dil seçme fonksiyonu
-function selectLanguage(language) {
-    if (!selectedLanguagesSet.has(language)) {
-        selectedLanguagesSet.add(language);
-        updateSelectedLanguages();
+  }
+  
+  // Dil seçme fonksiyonu
+  function selectLanguage(language) {
+    if (!selectedLanguagesSet.has(language) && selectedLanguages.length < 3) {
+      selectedLanguagesSet.add(language);
+      updateSelectedLanguages();
     }
-}
-
-function updateSelectedLanguages() {
-    resultsContainer.innerHTML = ''; // Önceki sonuçları temizle
-
-    // Seçilen dillerin başlığını oluştur
-    const selectedLanguagesHeader = document.createElement('div');
-    selectedLanguagesHeader.textContent = "Seçilen Diller:";
-    resultsContainer.appendChild(selectedLanguagesHeader);
-
-    // Seçilen dillerin listesini oluştur
-    const selectedLanguagesList = document.createElement('ul');
+  }
+  
+  // Seçilen dilleri g�ncelle
+  function updateSelectedLanguages() {
+    selectedLanguagesList.innerHTML = ''; // Önceki seçilen dilleri temizle
+  
+    // Seçilen dillerin listesini g�ncelle
     selectedLanguagesSet.forEach(lang => {
-        const listItem = document.createElement('li');
-        listItem.textContent = lang;
-        selectedLanguagesList.appendChild(listItem);
+      const listItem = document.createElement('li');
+      listItem.textContent = lang;
+      
+      // Kategori silme işlevselliği ekleyin
+      listItem.onclick = () => {
+        selectedLanguagesSet.delete(lang);
+        updateSelectedLanguages();
+      };
+      
+      selectedLanguagesList.appendChild(listItem);
     });
-    resultsContainer.appendChild(selectedLanguagesList);
-}
-updateSelectedLanguages();
-
-// Temizleme düğmesine tıklama olayı
-clearButton.addEventListener('click', () => {
+  }
+  
+  // Temizleme d�ğmesine tıklama olayı
+  clearButton.addEventListener('click', () => {
     selectedLanguagesSet.clear(); // Set'i temizle
     updateSelectedLanguages();
     searchBox.value = ''; // Arama kutusunu temizle
-    searchLanguages(); // Arama sonuçlarını güncelle
-});
+    searchLanguages(); // Arama sonuçlarını g�ncelle
+  });
   
+  // Dil arama kutusuna herhangi bir değişiklik yapıldığında aramayı başlatın
+  searchBox.addEventListener('input', searchLanguages);
+  
+  // Sayfa y�klendiğinde seçilen dilleri g�ncelle
+  updateSelectedLanguages();
+
+
 // Kullanıcı tercihlerine ve çerezlere dayalı olarak tema modunu belirler ve ayarlar
 (function(window, document, undefined){
     "use strict";
@@ -207,3 +207,11 @@ textarea.addEventListener("input", function() {
         charCount.style.color = "black";
     }
 });
+
+
+
+
+
+
+
+

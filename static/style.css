@@ -12,7 +12,28 @@ html, body {
 :root {
     --background-color: #ffffff;
     --text-color: #000000;
-    --button-hover-color: #c86a12;
+    --button-hover-color: rgb(22, 59, 97);
+}
+
+/* Genel olarak kaydırma çubuğuna stillendirme uygulama */
+::-webkit-scrollbar {
+    width: 12px; /* Kaydırma çubuğu genişliği */
+}
+
+/* Kaydırma çubuğunun track kısmının rengi */
+::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+
+/* Kaydırma çubuğunun thumb kısmını yuvarlak yapma */
+::-webkit-scrollbar-thumb {
+    background: #007bff; /* Thumb rengi */
+    border-radius: 6px; /* Yuvarlak köşeler */
+}
+
+/* Kaydırma çubuğunun thumb kısmının üzerine gelindiğindeki rengini değiştirme */
+::-webkit-scrollbar-thumb:hover {
+    background: #0056b3; /* Thumb üzerine gelindiğindeki renk */
 }
 
 
@@ -20,6 +41,14 @@ html, body {
 #logo {
     float: left;
     margin-right: 50px;
+}
+#bigbar{
+    width: 99.1%;
+    height: 6%;
+    display: flex;
+    position: fixed;
+    z-index: 1;
+    background-color: #163b61;
 }
 #düzenbar {
     width: 57%;
@@ -43,19 +72,35 @@ html, body {
     width: 25%;
     height: 100%;
     margin-left: 27%;
-    padding-top: 5px;
+    padding-top: 1px;
+    margin-top: 1%;
+}
+#myprofil {
+    width: 50px; /* Profil resminin genişliği */
+    height: 50px; /* Profil resminin yüksekliği */
+    border-radius: 50%; /* Resmi yuvarlak yapar */
+    overflow: hidden; /* Resmin sınırlarını yuvarlak yapar */
+    cursor: pointer; /* İmlecin üstüne geldiğinde el işareti görüntüler, tıklanabilir hale getirir */
+    float: left; /* Profil resmini sola kaydırır */
+    margin-right: 10px; /* Profil resmi ile "Log Out" bağlantısı arasında boşluk bırakır */
+    margin-top: -5px;
+}
+#myprofil img {
+    width: 100%; /* Resmi konteynerin genişliğine uygun olarak ayarlar */
+    height: auto; /* Orantılı olarak yüksekliği ayarlar */
 }
 #darkmod {
     width: 3%;
     height: 70%;
     margin-left: 5%;
-    padding-top: 10px;
+    margin-top: 1%;
+    padding-top: 7px;
     padding-left: 5px;
 }
 #searchBox {
     width: 40%;
     height: 65%;
-    margin-top: 5px;
+    margin-top: 1%;
 }
 
 /* Buttons */
@@ -70,16 +115,6 @@ html, body {
 }
 .button:hover {
     background-color: var(--button-hover-color);
-}
-#onaylaButton {
-    background-color: #8edc35; /* Kırmızı arka plan */
-    color: rgb(255, 255, 255); /* Beyaz metin */
-    border: none; /* Kenarlık yok */
-    padding: 8px 15px; /* İç boşluk */
-
-    border-radius: 5px; /* Yuvarlak köşeler */
-    cursor: pointer; /* Tıklanabilir olduğunu gösteren imleç */
-    transition: background-color 0.2s; /* Arka plan rengi geçiş efekti */
 }
 #clearButton {
     background-color: #dc3545; /* Kırmızı arka plan */
@@ -297,7 +332,7 @@ li a {
     text-decoration: none;
 }
 li a:hover, .menu:hover {
-    color: #bb7513;
+    color: rgb(22, 59, 97);
 }
 
 
@@ -425,6 +460,3 @@ button:hover {
 textarea {
     resize: none;
 }
-
-
-
