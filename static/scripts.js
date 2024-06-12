@@ -1,8 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Tema değiştirme düğmesi ve ikonu, sayfa ve body elementleri
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
     const body = document.body;
 
+    // Temayı ayarlayan fonksiyon
     const setTheme = (theme) => {
         if (theme === 'night') {
             body.classList.add('night-mode');
@@ -13,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
+    // Tema değiştirme düğmesine tıklama olayı
     themeToggle.addEventListener('click', function () {
         let currentTheme = 'day';
         if (body.classList.contains('night-mode')) {
@@ -20,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (body.style.getPropertyValue('--background-color') === 'rgb(255, 255, 255)') {
             currentTheme = 'light';
         }
+        // Tema durumuna göre temayı değiştir ve localStorage'a kaydet
         if (currentTheme === 'day') {
             setTheme('night');
             localStorage.setItem('theme', 'night');
@@ -28,16 +32,19 @@ document.addEventListener('DOMContentLoaded', function () {
             localStorage.setItem('theme', 'light');
         }
     });
+    // Kayıtlı temayı yükle veya varsayılan temayı kullan
     const savedTheme = localStorage.getItem('theme') || 'day';
     setTheme(savedTheme);
 });
 
-
+// Dil arama fonksiyonu
 function searchLanguages() {
+    // Arama kutusu, filtre ve sonuçları al
     const input = document.getElementById('searchBox');
     const filter = input.value.toLowerCase();
     const nodes = document.getElementsByClassName('post');
 
+     // Arama sonuçlarını filtrele ve göster
     for (let i = 0; i < nodes.length; i++) {
         if (nodes[i].innerText.toLowerCase().includes(filter)) {
             nodes[i].style.display = "flex";
@@ -48,7 +55,7 @@ function searchLanguages() {
 }
 
 
-
+// Dil arama fonksiyonu (diğer versiyon)
 const languages = ["Python", "JavaScript", "Java", "C#", "C++", "PHP", "Ruby", "Swift", "Go", "Kotlin", "Rust"];
 const searchBox = document.getElementById('searchBox');
 const resultsContainer = document.getElementById('resultsContainer');
@@ -58,12 +65,13 @@ const selectedLanguagesContainer = document.getElementById('selectedLanguagesCon
 const selectedLanguagesList = document.getElementById('selectedLanguagesList');
 const clearButton = document.getElementById('clearButton');
 
+// Dil arama fonksiyonu (filtreleme ve sonuçları gösterme)
 function searchLanguages() {
     const searchTerm = searchBox.value.toLowerCase();
     const filteredLanguages = languages.filter(lang => 
         lang.toLowerCase().includes(searchTerm) && !selectedLanguages.includes(lang) // Seçilmemiş dilleri filtrele
     );
-
+    // Sonuçları göster
     resultsContainer.innerHTML = '';
     filteredLanguages.forEach(lang => {
         const listItem = document.createElement('li');
@@ -73,6 +81,7 @@ function searchLanguages() {
     });
 }
 
+// Dil seçme fonksiyonu
 function selectLanguage(language) {
     if (!selectedLanguagesSet.has(language)) {
         selectedLanguagesSet.add(language);
@@ -83,7 +92,7 @@ function selectLanguage(language) {
 function updateSelectedLanguages() {
     resultsContainer.innerHTML = ''; // Önceki sonuçları temizle
 
-    // Seçilen dilleri bir kez yazdır
+    // Seçilen dillerin başlığını oluştur
     const selectedLanguagesHeader = document.createElement('div');
     selectedLanguagesHeader.textContent = "Seçilen Diller:";
     resultsContainer.appendChild(selectedLanguagesHeader);
@@ -99,6 +108,7 @@ function updateSelectedLanguages() {
 }
 updateSelectedLanguages();
 
+// Temizleme düğmesine tıklama olayı
 clearButton.addEventListener('click', () => {
     selectedLanguagesSet.clear(); // Set'i temizle
     updateSelectedLanguages();
@@ -106,37 +116,50 @@ clearButton.addEventListener('click', () => {
     searchLanguages(); // Arama sonuçlarını güncelle
 });
   
-
+// Kullanıcı tercihlerine ve çerezlere dayalı olarak tema modunu belirler ve ayarlar
 (function(window, document, undefined){
     "use strict";
+    // Tarayıcıda kayıtlı "nightMode" çerezinin varlığını kontrol eder
     var nightMode = document.cookie.indexOf("nightMode=true") !== -1;
+    // Tarayıcıda kayıtlı "nightMode" çerezinin olmadığını ve "lightMode" çerezinin varlığını kontrol eder
     var lightMode = document.cookie.indexOf("nightMode=false") !== -1;
+    // Eğer "nightMode" çerezi varsa, body elementine "night-mode" sınıfını ekler
     if (nightMode){
       document.body.classList.add("night-mode");
     } else {
+      // Eğer "nightMode" çerezi yoksa, body elementine varsayılan olarak "light-mode" sınıfını ekler
       document.body.classList.add("light-mode");
     }
     
+    // Kullanıcının tarayıcı tercihlerine göre temayı belirler
     const userPrefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
     const userPrefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
 
+    // Eğer tarayıcıda "nightMode" çerezi yok ve kullanıcı karanlık modu tercih ediyorsa, body elementine "night-mode" sınıfını ekler
     if (!lightMode && userPrefersDark){
         document.body.classList.add("night-mode");
     }
+    // Eğer tarayıcıda "nightMode" çerezi yok ve kullanıcı açık modu tercih ediyorsa, body elementine "light-mode" sınıfını ekler
     if (!nightMode && userPrefersLight){
         document.body.classList.add("light-mode");
     }
 })(window, document);
 
+// Tema değiştirme işlevselliği ekler
 (function(window, document, undefined){
     "use strict";
+    // Tema değiştirme düğmesini ve ikonunu seçer
     var nav = document.querySelector(".theme-mode");
+    // Tema değiştirme düğmesine bir gece modu düğmesi ekler
     nav.innerHTML += '<span id="night-mode"><a role="button" title="nightMode" href="javascript:void(0);">🌓</a></span>';
     var nightMode = document.querySelector("#night-mode");
+    // Gece modu düğmesine tıklama olayı ekler
     nightMode.addEventListener("click", function(event){
         event.preventDefault();
+        // Body elementinden gece modu sınıfını kaldırır veya ekler
         document.body.classList.toggle("light-mode");
         document.body.classList.toggle("night-mode");
+        // Body'nin sınıflarına göre "nightMode" çerezini ayarlar
         if (document.body.classList.contains("night-mode")){
             document.cookie = "nightMode=true; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/; secure;";
         } else {
@@ -145,40 +168,42 @@ clearButton.addEventListener('click', () => {
     }, false);
 })(window, document);
 
-
+// Sayfa yüklendiğinde tartışma başlığı, etiketler ve içerik için CKEditor'ı başlatır ve gönderme işlevselliği ekler
 document.addEventListener('DOMContentLoaded', function() {
+  // HTML'de tanımlı başlık, etiketler ve gönderme düğmesini seçer
   const baslik = document.getElementById("baslik");
   const etiketler = document.getElementById("etiketler");
   const gonderButton = document.getElementById("gonder");
 
-  CKEDITOR.replace('editor'); // 'editor' div'ini CKEditor ile değiştirir
+  // CKEditor'ı başlatır
+  CKEDITOR.replace('editor');
 
+  // Gönderme düğmesine tıklama olayı ekler
   gonderButton.addEventListener("click", () => {
-    const editorData = CKEDITOR.instances.editor.getData(); // CKEditor içeriğini al
-    // Burada editorData'yı (başlık, etiket, içerik) sunucuya gönderebilirsiniz.
+    const editorData = CKEDITOR.instances.editor.getData(); // CKEditor içeriğini alır
+    // Editor içeriğini sunucuya gönderir (örneğin: başlık, etiket, içerik)
     alert("Tartışma başlatıldı! İçerik:\n" + editorData);
   });
 });
 
+// Belirli sınıfa sahip text bloklarının yatay kaydırma durumunu kontrol eder
 document.querySelectorAll('.text-block').forEach(block => {
     if (block.scrollWidth > block.clientWidth) {
         block.style.overflow = 'auto';
     }
 });
 
-
-
-// Karakter Sayacı
+// Karakter sayacı ekler
 var textarea = document.getElementById("content");
-    var charCount = document.getElementById("charCount");
+var charCount = document.getElementById("charCount");
 
-    textarea.addEventListener("input", function() {
-        var charLength = textarea.value.length;
-        charCount.textContent = "Characters: " + charLength + "/600";
+textarea.addEventListener("input", function() {
+    var charLength = textarea.value.length;
+    charCount.textContent = "Characters: " + charLength + "/600";
 
-        if (charLength > 600) {
-            charCount.style.color = "red";
-        } else {
-            charCount.style.color = "black";
-        }
-    });
+    if (charLength > 600) {
+        charCount.style.color = "red";
+    } else {
+        charCount.style.color = "black";
+    }
+});

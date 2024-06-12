@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
    
     <style>
+        /* Genel sayfa stili */
         body {
             display: flex;
             justify-content: center;
@@ -16,6 +17,7 @@
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
+        /* Gece modu stil ayarları */
         body.night-mode {
             background-color: rgb(20, 25, 31);
             color: white;
@@ -24,6 +26,7 @@
             background-color: rgb(29, 38, 49);
             color: white;
         }
+        /* Kayıt konteynırı stil ayarları */
         .register-container {
             position: relative;
             background-color: #fff;
@@ -32,6 +35,7 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+        /* Kapatma düğmesi stil ayarları */
         .close-btn {
             position: absolute;
             top: 10px;
@@ -47,16 +51,19 @@
             align-items: center;
             justify-content: center;
         }
+        /* Başlık stil ayarları */
         h1 {
             text-align: center;
             margin-bottom: 20px;
         }
+        /* Etiket stil ayarları */
         label {
             display: block;
             margin-bottom: 5px;
             text-align: center;
             font-weight: bold;
         }
+        /* Giriş alanı stil ayarları */
         input[type="email"],
         input[type="text"],
         input[type="password"] {
@@ -68,12 +75,14 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
+        /* Diğer stil ayarları */
         input[type="text"],
         input[type="password"],
         h6 {
             margin-top: 5px;
             margin-bottom: 5px;
         }
+        /* Kayıt düğmesi stil ayarları */
         button {
             display: block;
             width: 86%;
@@ -88,6 +97,7 @@
             cursor: pointer;
             box-sizing: border-box;
         }
+        /* Kayıt düğmesi üzerine gelindiğinde stil ayarları */
         button:hover {
             background-color: #0056b3;
         }
@@ -98,55 +108,66 @@
     <script>
    // Sayfa yüklendiğinde temayı ayarla
    window.onload = function() {
-            let tema = localStorage.getItem("tema") || "light"; // index.html ile aynı varsayılanı kullanıyoruz.
-            document.body.classList.add(tema + "-mode"); // Varsa "light-mode" veya "dark-mode" ekle
+            let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
+            document.body.classList.add(tema + "-mode"); // Mevcut temaya uygun sınıfı ekle
         };
 
-        // Tema değiştirme düğmesini index.html ile aynı şekilde dinle
+        // Tema değiştirme düğmesini dinle
         document.getElementById('themeToggle').addEventListener('click', function() {
             const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
             changeTheme(currentTheme);
         });
+
+        // Kayıt penceresini kapatma işlevi
         function closeRegister() {
             window.location.href = 'index.html';
         }
     </script>
     <div class="register-container" id="register-container">
         <button class="close-btn" onclick="closeRegister()">×</button>
-<h1>Register</h1>
-<form method="post" action="/register">
-    <label for="email">Email</label>
-    <input type="text" id="email" name="email">
-    {{if .Email}}
-        <div style="color:red">{{.Email}}</div>
-    {{end}}
-    <br>
-    <label for="username">Username</label>
-    <input type="text" id="username" name="username" maxlength="20">
-    {{if .Username}}
-        <div style="color:red">{{.Username}}</div>
-    {{else}}
-        <h6>Username must be at least 4 characters long.</h6>
-    {{end}}
-    <br>
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password">
-    {{if .Password}}
-        <div style="color:red">{{.Password}}</div>
-    {{else}}
-        <h6>Password must be at least 6 characters long.</h6>
-    {{end}}
-    <br>
-    <label for="confirm_password">Confirm Password</label>
-    <input type="password" id="confirm_password" name="confirm_password">
-    {{if .ConfirmPassword}}
-        <div style="color:red">{{.ConfirmPassword}}</div>
-    {{end}}
+        <h1>Register</h1>
+        <form method="post" action="/register">
+            <!-- Email alanı -->
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email">
+            <!-- Email hata mesajı -->
+            {{if .Email}}
+                <div style="color:red">{{.Email}}</div>
+            {{end}}
+            <br>
+            <!-- Kullanıcı adı alanı -->
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" maxlength="20">
+            <!-- Kullanıcı adı hata mesajı -->
+            {{if .Username}}
+                <div style="color:red">{{.Username}}</div>
+            {{else}}
+                <h6>Username must be at least 4 characters long.</h6>
+            {{end}}
+            <br>
+            <!-- Şifre alanı -->
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password">
+            <!-- Şifre hata mesajı -->
+            {{if .Password}}
+                <div style="color:red">{{.Password}}</div>
+            {{else}}
+                <h6>Password must be at least 6 characters long.</h6>
+            {{end}}
+            <br>
+            <!-- Şifre tekrar alanı -->
+            <label for="confirm_password">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password">
+            <!-- Şifre tekrar hata mesajı -->
+            {{if .ConfirmPassword}}
+                <div style="color:red">{{.ConfirmPassword}}</div>
+            {{end}}
 
-    <button type="submit">Register</button>
-    
-</form>
-<button id="themeToggle">Toggle Theme</button> 
+            <!-- Kayıt düğmesi -->
+            <button type="submit">Register</button>
+        </form>
+        <!-- Tema değiştirme düğmesi -->
+        <button id="themeToggle">Toggle Theme</button> 
     </div>
 </body>
 </html>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Create Post</title>
     <style>
+        /* Genel sayfa stili */
         body {
             display: flex;
             justify-content: center;
@@ -14,6 +15,7 @@
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
+        /* Post oluşturma konteynırı stili */
         .create-post-container {
             position: relative;
             background-color: #fff;
@@ -23,6 +25,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             margin: auto; /* Değişiklik: Ortaya hizalama */
         }
+        /* Kapatma düğmesi stili */
         .close-btn {
             position: absolute;
             top: 10px;
@@ -38,15 +41,18 @@
             align-items: center;
             justify-content: center;
         }
+        /* Başlık stili */
         h1 {
             text-align: left; /* Değişiklik: Başlık sola hizalandı */
             margin-bottom: 20px;
         }
+        /* Etiket stili */
         label {
             display: block;
             margin-bottom: 5px;
             text-align: left; /* Değişiklik: Etiketler sola hizalandı */
         }
+        /* Giriş alanı stili */
         input[type="text"],
         textarea,
         input[list] {
@@ -58,10 +64,12 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
+        /* Text alanı stili */
         textarea {
             height: 150px;
             resize: none;
         }
+        /* Gönder düğmesi stili */
         button {
             display: block;
             width: 50%;
@@ -75,6 +83,7 @@
             cursor: pointer;
             box-sizing: border-box;
         }
+        /* Gönder düğmesi üzerine gelindiğinde stili */
         button:hover {
             background-color: #0056b3;
         }
@@ -106,6 +115,7 @@
     </div>
 
     <script>
+        // Post oluşturma penceresini kapatma işlevi
         function closeCreatePost() {
             window.location.href = 'index.html';
         }

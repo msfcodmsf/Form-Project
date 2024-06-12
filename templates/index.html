@@ -7,12 +7,13 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
 </head>
 <body>
- 
+    <!-- Üst çubuk -->
     <div id="düzenbar">
         <div id="bar">
             <img id="logo" src="/static/png/logo.png">
             <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchLanguages()">
             <div id="darkmod">
+                <!-- Tema değiştirme düğmesi -->
                 <span class="theme-mode">
                     <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
                       <i id="themeIcon" class="fas fa-sun"></i></a> 
@@ -20,9 +21,11 @@
             </div>
             <div id="girişbar">
                 <nav>
+                    <!-- Giriş durumuna göre menü -->
                     {{if .LoggedIn}}
                         <a href="/myprofil" class="button">Profil</a>
                         <a href="/logout" class="button">Log Out</a>
+                         <!-- Hoş geldiniz popup'ı -->
                         <script>
                             const welcomePopup = document.createElement('div');
                             welcomePopup.innerHTML = `
@@ -63,6 +66,7 @@
     
     <div id="görünmezbar"></div>
     <div id="left">
+         <!-- Yeni gönderi oluşturma bağlantısı -->
         <a id="centerolustur" href="{{if .LoggedIn}}/createPost{{else}}/login{{end}}">
             {{if .LoggedIn}}
                 Create a new post
@@ -70,7 +74,7 @@
                 create a new post
             {{end}}
         </a>
-        
+        <!-- Kategori listesi -->
         <div id="leftkatagoricont">
             <div id="leftkatagoricontfoto"> <img src="/static/png/database.png" width="90%" height="50%"></div>
             <div id="leftkatagoricontyazı">Veri Tabanı</div>
@@ -106,7 +110,7 @@
             <div id="leftkatagoricontyazı">Cyber Security</div>
         </div>
     </div>
-
+    <!-- Ana içerik alanı -->
     <div id="center">
         <div id="filtrecont">
             <div id="filtre">En Yeni</div>
@@ -114,6 +118,7 @@
             <div id="filtre"></div>
             <div id="filtre"></div>
         </div>
+         <!-- Gönderi listesi -->
         <div id="centercont">
             {{range .Posts}}
             <div class="post">
@@ -147,9 +152,9 @@
             {{end}}
        </div> 
     </div>
-
+    <!-- Harici script dosyaları -->
     <script src="/static/scripts.js"></script>
-
+    <!-- Tema değiştirme script'i -->
     <script>
         let tema = localStorage.getItem("tema") || "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
         
@@ -165,7 +170,7 @@
             document.body.classList.add(tema + "-mode"); // Yeni tema sınıfını ekle
         });
     </script>
-
+    <!-- Çıkış yapma onayı script'i -->
     <script>
         // Çıkış yap butonuna tıklandığında onay popup'ı göster
         document.querySelector('a[href="/logout"]').addEventListener('click', function(event) {
