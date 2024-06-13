@@ -91,6 +91,7 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/sifreunut", sifreUnutHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/createPost", createPostHandler)
 	http.HandleFunc("/createComment", createCommentHandler)
@@ -354,6 +355,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
+
+
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -792,4 +795,18 @@ func getSession(r *http.Request) (*Session, error) {
 	session.Expiry = newExpiry
 
 	return &session, nil
+}
+
+
+func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/sifreunut.html")
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }

@@ -1,0 +1,88 @@
+ /* Genel vücut stillemesi */
+body {
+    font-family: sans-serif; /* Yazı tipi */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    background-color: #f4f4f4; /* Arka plan rengi */
+    margin: 0; /* Kenar boşluğu */
+}
+/* Gece modu için stillemeler */
+body.night-mode {
+    background-color: rgb(20, 25, 31); /* Gece modu arka plan rengi */
+    color: white; /* Gece modu metin rengi */
+}
+/* Profil container */
+.profile-container {
+    background-color: #fff; /* Profil container arka plan rengi */
+    border-radius: 8px; /* Köşe yuvarlaklığı */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Gölge */
+    height: 40%; /* Yükseklik */
+    width: 50%; /* Genişlik */
+    text-align: center; /* Metin hizalama */
+    margin-bottom: 10px; /* Alt boşluk */
+    position: relative; /* Konumlandırma */
+}
+/* Profil resmi */
+.profile-picture {
+    width: 150px; /* Genişlik */
+    height: 150px; /* Yükseklik */
+    border-radius: 50%; /* Kenar yuvarlaklığı */
+    object-fit: cover; /* Resmi container'a sığdırma */
+    margin-bottom: 20px; /* Alt boşluk */
+}
+/* Profil bilgileri */
+.profile-info {
+    margin-bottom: 20px; /* Alt boşluk */
+}
+/* Profil bilgisi paragrafları */
+.profile-info p {
+    margin: 5px 0; /* Paragraf kenar boşlukları */
+}
+/* Profil istatistikleri */
+.profile-stats {
+    display: flex;
+    justify-content: space-around; /* İçeriği yatayda dağıtma */
+    border-top: 1px solid #ddd; /* Üst kenarlık */
+    padding-top: 20px; /* Üst boşluk */
+}
+/* Profil istatistiği içerikleri */
+.profile-stats div {
+    text-align: center; /* Metin hizalama */
+}
+/* Bilgi çubuğu stillemesi */
+#bilgibar {
+    height: 10%; /* Yükseklik */
+    width: 50%; /* Genişlik */
+    background-color: #641515; /* Arka plan rengi */
+}
+/* Bilgi çubuğu içerikleri stillemesi */
+#bilgibarcont {
+    height: 100%; /* Yükseklik */
+    width: 20%; /* Genişlik */
+    background-color: #16d6da; /* Arka plan rengi */
+    color: black; /* Metin rengi */
+    text-align: center; /* Metin hizalama */
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; /* Yazı tipi */
+    float: left; /* Sola yaslama */
+    margin-left: 8%; /* Sol boşluk */
+    margin-right: 5%; /* Sağ boşluk */
+}
+/* Geri dön butonu */
+.back-button {
+    position: absolute; /* Mutlak konumlandırma */
+    top: 10px; /* Üstten boşluk */
+    left: 10px; /* Soldan boşluk */
+    padding: 5px 10px; /* İç boşluk */
+    background-color: #007BFF; /* Arka plan rengi */
+    color: #fff; /* Metin rengi */
+    border: none; /* Kenarlık */
+    border-radius: 5px; /* Köşe yuvarlaklığı */
+    cursor: pointer; /* İmleç */
+}
+.back-button:hover {
+    background-color: #0056b3; /* Hover durumu arka plan rengi */
+}
