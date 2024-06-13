@@ -220,6 +220,12 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err == nil && session != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	
 	if r.Method == http.MethodPost {
 		email := r.FormValue("email")
 		username := r.FormValue("username")
@@ -293,6 +299,12 @@ func renderRegisterTemplate(w http.ResponseWriter, errorMessages map[string]stri
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err == nil && session != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		email := r.FormValue("email")
 		password := r.FormValue("password")
@@ -373,7 +385,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
-	if err != nil {
+	if err != nil || session == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
@@ -406,7 +418,10 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, nil)
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func createCommentHandler(w http.ResponseWriter, r *http.Request) {
