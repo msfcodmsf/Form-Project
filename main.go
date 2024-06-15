@@ -98,9 +98,8 @@ func main() {
 	http.HandleFunc("/deletePost", deletePostHandler)
 	http.HandleFunc("/deleteComment", deleteCommentHandler)
 	http.HandleFunc("/vote", voteHandler)
-	http.HandleFunc("/filter", filterHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
-	http.HandleFunc("/myprofil", myProfileHandler) 
+	http.HandleFunc("/myprofil", myProfileHandler)
 
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
@@ -170,34 +169,13 @@ func createTables() {
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := getSession(r)
 
-	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.created_at, users.username,
-				COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
-				COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
-				FROM posts
-				JOIN users ON posts.user_id = users.id
-				LEFT JOIN votes ON votes.post_id = posts.id
-				WHERE posts.deleted = 0
-				GROUP BY posts.id
-				ORDER BY posts.created_at DESC`
+	searchQuery := r.URL.Query().Get("search")
+	category := r.URL.Query().Get("category")
 
-	rows, err := db.Query(query)
+	posts, err := getFilteredPosts(searchQuery, category)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
-	}
-	defer rows.Close()
-
-	var posts []Post
-	for rows.Next() {
-		var post Post
-		var username string
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.CreatedAt, &username, &post.LikeCount, &post.DislikeCount); err != nil {
-			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
-		post.Username = username
-		posts = append(posts, post)
 	}
 
 	tmpl, err := template.ParseFiles("templates/index.html")
@@ -226,7 +204,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	
+
 	if r.Method == http.MethodPost {
 		email := r.FormValue("email")
 		username := r.FormValue("username")
@@ -356,7 +334,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
 
-
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -387,24 +364,20 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
+	// Kullanıcının oturumunu kontrol et
 	session, err := getSession(r)
 	if err != nil || session == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
+	// Eğer HTTP metodu POST ise gönderi oluşturma işlemi
 	if r.Method == http.MethodPost {
 		title := r.FormValue("title")
 		content := r.FormValue("content")
-		categories := r.Form["categories"]
+		categoriesJSON := r.FormValue("categories") // Kategorileri JSON olarak al
 
-		// Kategorileri JSON formatına dönüştür
-		categoriesJSON, err := json.Marshal(categories)
-		if err != nil {
-			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
+		// Veritabanına gönderiyi ekle
 		_, err = db.Exec("INSERT INTO posts (user_id, title, content, categories, created_at) VALUES (?, ?, ?, ?, ?)",
 			session.UserID, title, content, categoriesJSON, time.Now())
 		if err != nil {
@@ -416,6 +389,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Eğer HTTP metodu GET ise formu render et
 	tmpl, err := template.ParseFiles("templates/createPost.html")
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
@@ -622,47 +596,47 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func filterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+// func filterHandler(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method != http.MethodGet {
+// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+// 		return
+// 	}
 
-	category := r.URL.Query().Get("category")
-	query := "SELECT id, user_id, title, content, categories, created_at FROM posts"
-	args := []interface{}{}
+// 	category := r.URL.Query().Get("category")
+// 	query := "SELECT id, user_id, title, content, categories, created_at FROM posts"
+// 	args := []interface{}{}
 
-	if category != "" {
-		query += " WHERE categories LIKE ?"
-		args = append(args, "%"+category+"%")
-	}
+// 	if category != "" {
+// 		query += " WHERE categories LIKE ?"
+// 		args = append(args, "%"+category+"%")
+// 	}
 
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
+// 	rows, err := db.Query(query, args...)
+// 	if err != nil {
+// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	defer rows.Close()
 
-	var posts []Post
-	for rows.Next() {
-		var post Post
-		var categories string
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		err = json.Unmarshal([]byte(categories), &post.Categories)
-		if err != nil {
-			handleErr(w, err, "Error parsing categories", http.StatusInternalServerError)
-			return
-		}
-		posts = append(posts, post)
-	}
+// 	var posts []Post
+// 	for rows.Next() {
+// 		var post Post
+// 		var categories string
+// 		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt); err != nil {
+// 			http.Error(w, "Internal server error", http.StatusInternalServerError)
+// 			return
+// 		}
+// 		err = json.Unmarshal([]byte(categories), &post.Categories)
+// 		if err != nil {
+// 			handleErr(w, err, "Error parsing categories", http.StatusInternalServerError)
+// 			return
+// 		}
+// 		posts = append(posts, post)
+// 	}
 
-	tmpl, _ := template.ParseFiles("templates/filter.html")
-	tmpl.Execute(w, posts)
-}
+// 	tmpl, _ := template.ParseFiles("templates/filter.html")
+// 	tmpl.Execute(w, posts)
+// }
 
 func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -748,21 +722,21 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func myProfileHandler(w http.ResponseWriter, r *http.Request) {
-    session, err := getSession(r)
-    if err != nil || session == nil { // Check session explicitly
-        http.Redirect(w, r, "/login", http.StatusSeeOther) 
-        return
-    }
+	session, err := getSession(r)
+	if err != nil || session == nil { // Check session explicitly
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-    // Optionally, fetch user data from the database based on session.UserID
-    // and pass it to the template
+	// Optionally, fetch user data from the database based on session.UserID
+	// and pass it to the template
 
-    tmpl, err := template.ParseFiles("templates/myprofil.html")
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    tmpl.Execute(w, nil) // Pass user data if fetched
+	tmpl, err := template.ParseFiles("templates/myprofil.html")
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil) // Pass user data if fetched
 }
 
 func getSession(r *http.Request) (*Session, error) {
@@ -797,7 +771,6 @@ func getSession(r *http.Request) (*Session, error) {
 	return &session, nil
 }
 
-
 func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("templates/sifreunut.html")
 	if err != nil {
@@ -809,4 +782,61 @@ func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func getFilteredPosts(searchQuery, category string) ([]Post, error) {
+	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+				COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+				COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+				FROM posts
+				JOIN users ON posts.user_id = users.id
+				LEFT JOIN votes ON votes.post_id = posts.id
+				WHERE posts.deleted = 0`
+
+	args := []interface{}{}
+	conditions := []string{}
+
+	if searchQuery != "" {
+		conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
+		searchTerm := "%" + searchQuery + "%"
+		args = append(args, searchTerm, searchTerm)
+	}
+
+	if category != "" {
+		conditions = append(conditions, "posts.categories LIKE ?")
+		categoryTerm := "%" + category + "%"
+		args = append(args, categoryTerm)
+	}
+
+	if len(conditions) > 0 {
+		query += " AND " + strings.Join(conditions, " AND ")
+	}
+
+	query += " GROUP BY posts.id ORDER BY posts.created_at DESC"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		var username string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &username, &post.LikeCount, &post.DislikeCount); err != nil {
+			return nil, err
+		}
+		var categories []string
+		if err := json.Unmarshal([]byte(categoriesJSON), &categories); err != nil {
+			return nil, err
+		}
+		post.Categories = categories
+
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		post.Username = username
+		posts = append(posts, post)
+	}
+	return posts, nil
 }

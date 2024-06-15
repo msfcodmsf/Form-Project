@@ -14,7 +14,7 @@
         <div id="düzenbar">
             <div id="bar">
                 <img id="logo" src="/static/png/logo.png">
-                <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchLanguages()">
+                <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
                     <span class="theme-mode">
@@ -99,6 +99,7 @@
         <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0md9ggTF7selJptz6I5jjg?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
     </div>
 </div>
+
     <div id="left">
        
          <!-- Yeni gönderi oluşturma bağlantısı -->
@@ -109,6 +110,17 @@
                 create a new post
             {{end}}
         </a>
+        <div id="categoryFilter">
+            <label for="categorySelect">Kategoriye Göre Filtrele:</label>
+            <select id="categorySelect" onchange="filterByCategory()">
+                <option value="">Tüm Kategoriler</option>
+                <option value="Veri Tabanı">Veri Tabanı</option>
+                <option value="Programlama">Programlama</option>
+                <option value="Yapay Zeka">Yapay Zeka</option>
+                <!-- Diğer kategoriler buraya eklenebilir -->
+            </select>
+        </div>
+        
         <!-- Kategori listesi -->
         <div id="leftkatagoricont">
             <div id="leftkatagoricontfoto"> <img src="/static/png/database.png" width="90%" height="50%"></div>
@@ -144,11 +156,9 @@
             <div id="leftkatagoricontfoto"> <img src="/static/png/cyber-criminal.png" width="90%" height="50%"></div>
             <div id="leftkatagoricontyazı">Cyber Security</div>
         </div>
-         <!-- Spotify Widget -->
          
     </div>
 
-         
     <!-- Ana içerik alanı -->
     <div id="center">
         <div id="filtrecont">
@@ -229,6 +239,7 @@
             document.body.classList.add(tema + "-mode"); // Yeni tema sınıfını ekle
         });
     </script>
+    <!-- Mesaj ekleme script'i -->
     <script>
         const mesajListesi = document.getElementById("mesajListesi");
 
@@ -262,5 +273,50 @@ mesajEkle("İyiyim, sen nasılsın? bitanem", "diger");
 mesajEkle("Ben de iyiyim, teşekkürler. 💅🏻💅🏻💅🏻", "ben");
 
     </script>
+
+    <!-- Arama script'i -->
+    <script>
+        // Arama fonksiyonu
+    function searchPosts() {
+        const input = document.getElementById('searchBox');
+        const filter = input.value.toLowerCase();
+        const posts = document.querySelectorAll('.post'); // #post yerine .post
+
+        posts.forEach(post => {
+            const title = post.querySelector('h3 a').textContent.toLowerCase();
+            const content = post.querySelector('ul li').textContent.toLowerCase();
+            post.style.display = title.includes(filter) || content.includes(filter) ? '' : 'none';
+        });
+    }
+
+    // Arama kutusuna enter tuşu olay dinleyicisi eklenmesi
+    document.getElementById('searchBox').addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            searchPosts();
+        }
+    });
+
+        function filterByCategory() {
+            const category = document.getElementById('categorySelect').value;
+            const searchQuery = document.getElementById('searchBox').value;
+            const params = new URLSearchParams();
+
+            if (category) {
+                params.append('category', category);
+            }
+            if (searchQuery) {
+                params.append('search', searchQuery);
+            }
+
+            window.location.href = '/?' + params.toString();
+        }
+    </script>
+
+<script>
+    function submitCategoryForm() {
+        document.getElementById('categoryForm').submit();
+    }
+</script>
+
 </body>
 </html>
