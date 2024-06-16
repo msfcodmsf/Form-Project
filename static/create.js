@@ -1,5 +1,3 @@
-   
-
         function closeCreatePost() {
             window.location.href = 'index.html';
         }

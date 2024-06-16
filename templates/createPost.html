@@ -54,6 +54,8 @@
             <div id="selectedLanguagesContainer">
                 <ul id="selectedLanguagesList"></ul>
             </div>
+            <!--Kullanıcıların seçilecek kategorileri gizleme-->
+            <!--Form gönderildiğinde bu gizli input alanındaki değer sunucuya gönderilir-->
             <input type="hidden" id="categoriesInput" name="categories"> <!-- Gizli input eklendi -->
             <br>
             <br> <button class="form-buttons" type="submit">Create Post</button>
@@ -62,7 +64,18 @@
     </div>
     </div>
 
-    <script>
+    <script>    
+// Temizle butonunu hedefle
+const clearButton = document.getElementById('clearButton');
+
+// Temizle butonuna tıklanınca formu temizle
+clearButton.addEventListener('click', function () {
+    const form = document.querySelector('form');
+    form.reset(); // Formu sıfırla
+    selectedLanguagesList.innerHTML = ''; // Seçilen kategoriler listesini temizle
+    updateCategoriesInput();
+});
+
 function closeCreatePost() {
     window.location.href = 'index.html';
 }
@@ -81,17 +94,6 @@ document.addEventListener('click', function (event) {
     if (!isClickInsideDropdown) {
         closeAllDropdowns();
     }
-});
-
-// Temizle butonunu hedefle
-const clearButton = document.getElementById('clearButton');
-
-// Temizle butonuna tıklanınca formu temizle
-clearButton.addEventListener('click', function () {
-    const form = document.querySelector('form');
-    form.reset(); // Formu sıfırla
-    selectedLanguagesList.innerHTML = ''; // Seçilen kategoriler listesini temizle
-    updateCategoriesInput();
 });
 
 // Kategoriler penceresini açan fonksiyon
@@ -226,6 +228,6 @@ document.getElementById('themeToggle').addEventListener('click', function () {
 });
 
     </script>
-</body>
 
+</body>
 </html>

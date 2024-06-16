@@ -13,7 +13,9 @@
     <div id="bigbar">
         <div id="düzenbar">
             <div id="bar">
-                <img id="logo" src="/static/png/logo.png">
+                <!-- Logo -->
+                <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
+
                 <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
@@ -117,6 +119,10 @@
                 <option value="Veri Tabanı">Veri Tabanı</option>
                 <option value="Programlama">Programlama</option>
                 <option value="Yapay Zeka">Yapay Zeka</option>
+                <option value="Oyun Motorları">Oyun Motorları</option>
+                <option value="Robotik Sistemler">Robotik Sistemler</option>
+                <option value="React Native">React Native</option>
+                <option value="Cyber Security">Cyber Security</option>
                 <!-- Diğer kategoriler buraya eklenebilir -->
             </select>
         </div>
@@ -193,6 +199,7 @@
                             </button>
                         </form>
                         <p>Kategori</p>
+                        {{.Categories}}
                     </div>
             </div>
             {{end}}
@@ -311,12 +318,6 @@ mesajEkle("Ben de iyiyim, teşekkürler. 💅🏻💅🏻💅🏻", "ben");
             window.location.href = '/?' + params.toString();
         }
     </script>
-
-<script>
-    function submitCategoryForm() {
-        document.getElementById('categoryForm').submit();
-    }
-</script>
 
 </body>
 </html>

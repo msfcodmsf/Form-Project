@@ -150,7 +150,7 @@ button#clearButton {
         .dropdown-container {
             position: absolute;
             width: 13%; /* Genişlik artırıldı */
-            max-height: 200px; /* Maksimum yükseklik sınırı eklendi */
+            max-height: 400px; /* Maksimum yükseklik sınırı eklendi */
             overflow-y: auto;
             border: 1px solid #ccc;
             border-radius: 10px; /* Border radius artırıldı */

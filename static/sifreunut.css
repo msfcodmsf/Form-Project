@@ -50,3 +50,20 @@ button {
 button:hover {
     background-color: #0056b3;
 }
+
+/* Kapat düğmesi stillemesi */
+.close-btn {
+    position: absolute;
+    top: 10px; /* Üstten boşluk */
+    right: 10px; /* Sağdan boşluk */
+    width: 30px; /* Genişlik */
+    height: 30px; /* Yükseklik */
+    background-color: transparent; /* Arka plan rengi */
+    border: none; /* Kenarlık */
+    font-size: 24px; /* Yazı tipi boyutu */
+    cursor: pointer; /* İmleç */
+    color: black; /* Metin rengi */
+    display: flex; /* Öğe görüntüleme */
+    align-items: center; /* Öğeleri dikeyde hizalama */
+    justify-content: center; /* Öğeleri yatayda hizalama */
+}
