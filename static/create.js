@@ -2,7 +2,7 @@
             window.location.href = 'index.html';
         }
 
-        // Tüm dropdownları kapatan fonksiyon
+// Tüm dropdownları kapatan fonksiyon
 function closeAllDropdowns() {
     const dropdowns = document.querySelectorAll('.dropdown-container');
     dropdowns.forEach(dropdown => {
@@ -52,10 +52,6 @@ document.addEventListener('click', function(event) {
         closeCategoriesDropdown();
     }
 });
-
-// Dropdown açma fonksiyonları devam eder...
-
-
 
         // Dropdown ve arama fonksiyonları
         const searchBox = document.getElementById('searchBox');
@@ -147,8 +143,8 @@ themeToggleButton.addEventListener('click', function() {
             localStorage.setItem("tema", theme);
         }
 
-                    // Tema ayarları
-                    window.onload = function() {
+        // Tema ayarları
+        window.onload = function() {
             let tema = localStorage.getItem("tema") || "light";
             document.body.classList.add(tema + "-mode");
         };

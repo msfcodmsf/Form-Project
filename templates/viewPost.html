@@ -148,9 +148,6 @@
         });
     </script>
 
-    <!-- Sayfa genel script dosyası -->
-    <script src="/static/scripts.js"></script>
-
     <!-- Tema değiştirme scripti -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -167,6 +164,21 @@
                 themeIcon.classList.toggle("fas fa-moon", !isLightMode);
             });
         });
+    </script>
+
+    <!-- Tema değiştirme scripti -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const theme = localStorage.getItem('theme');
+            if (theme) {
+                document.getElementById('theme-link').href = theme;
+            }
+        });
+
+        function changeTheme(theme) {
+            document.getElementById('theme-link').href = theme;
+            localStorage.setItem('theme', theme);
+        }
     </script>
 
     <!-- AJAX ile oylama ve silme işlemleri için script -->
@@ -214,20 +226,8 @@
         }
     </script>
 
-    <!-- Tema değiştirme scripti -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const theme = localStorage.getItem('theme');
-            if (theme) {
-                document.getElementById('theme-link').href = theme;
-            }
-        });
-
-        function changeTheme(theme) {
-            document.getElementById('theme-link').href = theme;
-            localStorage.setItem('theme', theme);
-        }
-    </script>
+    <!-- Sayfa genel script dosyası -->
+    <script src="/static/scripts.js"></script>
 
 </body>
 </html>

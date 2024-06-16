@@ -64,18 +64,7 @@
     </div>
     </div>
 
-    <script>    
-// Temizle butonunu hedefle
-const clearButton = document.getElementById('clearButton');
-
-// Temizle butonuna tıklanınca formu temizle
-clearButton.addEventListener('click', function () {
-    const form = document.querySelector('form');
-    form.reset(); // Formu sıfırla
-    selectedLanguagesList.innerHTML = ''; // Seçilen kategoriler listesini temizle
-    updateCategoriesInput();
-});
-
+    <script>
 function closeCreatePost() {
     window.location.href = 'index.html';
 }
@@ -94,6 +83,17 @@ document.addEventListener('click', function (event) {
     if (!isClickInsideDropdown) {
         closeAllDropdowns();
     }
+});
+
+// Temizle butonunu hedefle
+const clearButton = document.getElementById('clearButton');
+
+// Temizle butonuna tıklanınca formu temizle
+clearButton.addEventListener('click', function () {
+    const form = document.querySelector('form');
+    form.reset(); // Formu sıfırla
+    selectedLanguagesList.innerHTML = ''; // Seçilen kategoriler listesini temizle
+    updateCategoriesInput();
 });
 
 // Kategoriler penceresini açan fonksiyon
@@ -228,6 +228,6 @@ document.getElementById('themeToggle').addEventListener('click', function () {
 });
 
     </script>
-
 </body>
+
 </html>

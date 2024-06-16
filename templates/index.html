@@ -109,9 +109,11 @@
             {{if .LoggedIn}}
                 Create a new post
             {{else}}
-                create a new post
+                Create a new post
             {{end}}
         </a>
+        <br>
+        <br>
         <div id="categoryFilter">
             <label for="categorySelect">Kategoriye Göre Filtrele:</label>
             <select id="categorySelect" onchange="filterByCategory()">
@@ -126,7 +128,8 @@
                 <!-- Diğer kategoriler buraya eklenebilir -->
             </select>
         </div>
-        
+        <br>
+        <br>
         <!-- Kategori listesi -->
         <div id="leftkatagoricont">
             <div id="leftkatagoricontfoto"> <img src="/static/png/database.png" width="90%" height="50%"></div>
@@ -230,6 +233,7 @@
     
     <!-- Harici script dosyaları -->
     <script src="/static/scripts.js"></script>
+
     <!-- Tema değiştirme script'i -->
     <script>
         let tema = localStorage.getItem("tema") || "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
@@ -246,6 +250,7 @@
             document.body.classList.add(tema + "-mode"); // Yeni tema sınıfını ekle
         });
     </script>
+    
     <!-- Mesaj ekleme script'i -->
     <script>
         const mesajListesi = document.getElementById("mesajListesi");
@@ -317,6 +322,28 @@ mesajEkle("Ben de iyiyim, teşekkürler. 💅🏻💅🏻💅🏻", "ben");
 
             window.location.href = '/?' + params.toString();
         }
+    </script>
+
+    <!-- Spotify script'i load düzeltme-->
+    <script>
+    function loadScript(url, callback) {
+      let script = document.createElement('script');
+      script.src = url;
+      script.onload = () => callback(null, script);
+      script.onerror = () => callback(new Error(`Failed to load script: ${url}`));
+      document.head.appendChild(script);
+    }
+  
+    // Example usage
+    loadScript('https://embed-cdn.spotifycdn.com/_next/static/chunks/pages/_app-c1c8488db5e2f479.js', (err, script) => {
+      if (err) {
+        console.error(err);
+        alert('Failed to load Spotify script. Some features may not work.');
+      } else {
+        console.log('Spotify script loaded successfully.');
+        // Initialize or call Spotify functions here
+      }
+    });
     </script>
 
 </body>

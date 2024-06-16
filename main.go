@@ -333,7 +333,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
-
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -375,11 +374,23 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		title := r.FormValue("title")
 		content := r.FormValue("content")
-		categoriesJSON := r.FormValue("categories") // Kategorileri JSON olarak al
+		categoriesJSON := r.FormValue("categories")
 
-		// Veritabanına gönderiyi ekle
+		var categories []string
+		err := json.Unmarshal([]byte(categoriesJSON), &categories)
+		if err != nil {
+			handleErr(w, err, "Invalid categories format", http.StatusBadRequest)
+			return
+		}
+
+		categoriesData, err := json.Marshal(categories)
+		if err != nil {
+			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		_, err = db.Exec("INSERT INTO posts (user_id, title, content, categories, created_at) VALUES (?, ?, ?, ?, ?)",
-			session.UserID, title, content, categoriesJSON, time.Now())
+			session.UserID, title, content, string(categoriesData), time.Now())
 		if err != nil {
 			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 			return
@@ -596,49 +607,9 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// func filterHandler(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// 	category := r.URL.Query().Get("category")
-// 	query := "SELECT id, user_id, title, content, categories, created_at FROM posts"
-// 	args := []interface{}{}
-
-// 	if category != "" {
-// 		query += " WHERE categories LIKE ?"
-// 		args = append(args, "%"+category+"%")
-// 	}
-
-// 	rows, err := db.Query(query, args...)
-// 	if err != nil {
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	defer rows.Close()
-
-// 	var posts []Post
-// 	for rows.Next() {
-// 		var post Post
-// 		var categories string
-// 		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categories, &post.CreatedAt); err != nil {
-// 			http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 			return
-// 		}
-// 		err = json.Unmarshal([]byte(categories), &post.Categories)
-// 		if err != nil {
-// 			handleErr(w, err, "Error parsing categories", http.StatusInternalServerError)
-// 			return
-// 		}
-// 		posts = append(posts, post)
-// 	}
-
-// 	tmpl, _ := template.ParseFiles("templates/filter.html")
-// 	tmpl.Execute(w, posts)
-// }
-
 func viewPostHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := getSession(r)
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -651,21 +622,21 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var post Post
-	var categoriesJSON string // Kategorileri tutmak için bir değişken tanımlayın
+	var categoriesJSON string
 	err := db.QueryRow(`SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
-						COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
-						COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
-						FROM posts
-						JOIN users ON posts.user_id = users.id
-						LEFT JOIN votes ON votes.post_id = posts.id
-						WHERE posts.id = ? AND posts.deleted = 0
-						GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
+		COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+		COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+		FROM posts
+		JOIN users ON posts.user_id = users.id
+		LEFT JOIN votes ON votes.post_id = posts.id
+		WHERE posts.id = ? AND posts.deleted = 0
+		GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount)
+
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
 
-	// Kategorileri JSON'dan çıkar
 	var categories []string
 	err = json.Unmarshal([]byte(categoriesJSON), &categories)
 	if err != nil {
@@ -704,9 +675,11 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Post     Post
 		Comments []Comment
+		LoggedIn bool
 	}{
 		Post:     post,
 		Comments: comments,
+		LoggedIn: session != nil,
 	}
 
 	tmpl, err := template.ParseFiles("templates/viewPost.html")
