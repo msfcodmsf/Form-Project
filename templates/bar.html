@@ -6,14 +6,15 @@
         <div id="düzenbar">
             <div id="bar">
                 <!-- Logo -->
-                <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
+                <a href="index.html" id="logo"
+                    style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
 
                 <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
                     <span class="theme-mode">
                         <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
-                            </a>
+                        </a>
                     </span>
                 </div>
                 <div id="girişbar">
@@ -42,7 +43,7 @@
                                 // Tema moduna göre popup rengini ayarla
                                 const popupElement = welcomePopup.querySelector('#popup');
                                 const theme = localStorage.getItem("tema") ||
-                                "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
+                                    "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
                                 if (theme === "dark") {
                                     popupElement.style.backgroundColor = "rgb(239, 242, 246)";
                                     popupElement.style.color = "black";
@@ -63,7 +64,7 @@
                             // Çıkış yap butonuna tıklandığında onay popup'ı göster ve localStorage'ı temizle
                             document.querySelector('#logoutButton').addEventListener('click', function (event) {
                                 event
-                            .preventDefault(); // Bağlantının varsayılan davranışını engelle (sayfayı yenileme)
+                                    .preventDefault(); // Bağlantının varsayılan davranışını engelle (sayfayı yenileme)
 
                                 // Onay popup'ını göster
                                 if (confirm('Are you sure you want to log out?')) {

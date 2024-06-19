@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" type="text/css" href="/static/css/login.css">
 </head>
+
 <body>
     <!-- Scripts etiketi -->
     <script src="/static/scripts.js"></script>
@@ -27,20 +29,20 @@
         </form>
         <br>
         <!-- Tema değiştirme düğmesi -->
-        <button id="themeToggle">Toggle Theme</button> 
-       <p><a href="/register">Don't you have a subscription?</a></p> 
-       <p><a href="/sifreunut">Forgot your password?</a></p>
+        <button id="themeToggle">Toggle Theme</button>
+        <p><a href="/register">Don't you have a subscription?</a></p>
+        <p><a href="/sifreunut">Forgot your password?</a></p>
     </div>
 
     <script>
         // Sayfa yüklendiğinde temayı ayarla
-        window.onload = function() {
+        window.onload = function () {
             let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
             document.body.classList.add(tema + "-mode"); // Varsa "light-mode" veya "dark-mode" ekle
         };
 
         // Tema değiştirme düğmesini dinle
-        document.getElementById('themeToggle').addEventListener('click', function() {
+        document.getElementById('themeToggle').addEventListener('click', function () {
             const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
             changeTheme(currentTheme);
         });
@@ -50,6 +52,7 @@
             window.location.href = 'index.html';
         }
     </script>
-    
+
 </body>
+
 </html>

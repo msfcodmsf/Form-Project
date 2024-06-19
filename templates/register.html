@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Register</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
     <link rel="stylesheet" type="text/css" href="/static/css/register.css">
 </head>
+
 <body>
     <script src="/static/scripts.js"></script>
 
     <script>
-   // Sayfa yüklendiğinde temayı ayarla
-   window.onload = function() {
+        // Sayfa yüklendiğinde temayı ayarla
+        window.onload = function () {
             let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
             document.body.classList.add(tema + "-mode"); // Mevcut temaya uygun sınıfı ekle
         };
 
         // Tema değiştirme düğmesini dinle
-        document.getElementById('themeToggle').addEventListener('click', function() {
+        document.getElementById('themeToggle').addEventListener('click', function () {
             const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
             changeTheme(currentTheme);
         });
@@ -37,7 +39,7 @@
             <input type="text" id="email" name="email" required>
             <!-- Email hata mesajı -->
             {{if .Email}}
-                <div style="color:red">{{.Email}}</div>
+            <div style="color:red">{{.Email}}</div>
             {{end}}
             <br>
             <!-- Kullanıcı adı alanı -->
@@ -45,9 +47,9 @@
             <input type="text" id="username" name="username" maxlength="20" required>
             <!-- Kullanıcı adı hata mesajı -->
             {{if .Username}}
-                <div style="color:red">{{.Username}}</div>
+            <div style="color:red">{{.Username}}</div>
             {{else}}
-                <h6>Username must be at least 4 characters long.</h6>
+            <h6>Username must be at least 4 characters long.</h6>
             {{end}}
             <br>
             <!-- Şifre alanı -->
@@ -55,9 +57,9 @@
             <input type="password" id="password" name="password" required>
             <!-- Şifre hata mesajı -->
             {{if .Password}}
-                <div style="color:red">{{.Password}}</div>
+            <div style="color:red">{{.Password}}</div>
             {{else}}
-                <h6>Password must be at least 6 characters long.</h6>
+            <h6>Password must be at least 6 characters long.</h6>
             {{end}}
             <br>
             <!-- Şifre tekrar alanı -->
@@ -65,16 +67,17 @@
             <input type="password" id="confirm_password" name="confirm_password" required>
             <!-- Şifre tekrar hata mesajı -->
             {{if .ConfirmPassword}}
-                <div style="color:red">{{.ConfirmPassword}}</div>
+            <div style="color:red">{{.ConfirmPassword}}</div>
             {{end}}
 
             <!-- Kayıt düğmesi -->
             <button type="submit">Register</button>
         </form>
         <!-- Tema değiştirme düğmesi -->
-        <button id="themeToggle">Toggle Theme</button> 
+        <button id="themeToggle">Toggle Theme</button>
 
-       <p><a href="/login">Do you have a subscription?</a></p> 
+        <p><a href="/login">Do you have a subscription?</a></p>
     </div>
 </body>
+
 </html>
