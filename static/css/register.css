@@ -9,19 +9,23 @@ body {
     font-family: Arial, sans-serif;
     background-color: #f0f0f0;
 }
+
 /* Gece modu stil ayarları */
 body.night-mode {
     background-color: rgb(20, 25, 31);
     color: white;
 }
+
 body.night-mode .register-container {
     background-color: rgb(29, 38, 49);
     color: white;
 }
+
 a {
     margin-left: 30%;
     text-decoration: none;
 }
+
 /* Kayıt konteynırı stil ayarları */
 .register-container {
     position: relative;
@@ -31,6 +35,7 @@ a {
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
+
 /* Kapatma düğmesi stil ayarları */
 .close-btn {
     position: absolute;
@@ -47,11 +52,13 @@ a {
     align-items: center;
     justify-content: center;
 }
+
 /* Başlık stil ayarları */
 h1 {
     text-align: center;
     margin-bottom: 20px;
 }
+
 /* Etiket stil ayarları */
 label {
     display: block;
@@ -59,6 +66,7 @@ label {
     text-align: center;
     font-weight: bold;
 }
+
 /* Giriş alanı stil ayarları */
 input[type="email"],
 input[type="text"],
@@ -71,6 +79,7 @@ input[type="password"] {
     border-radius: 5px;
     box-sizing: border-box;
 }
+
 /* Diğer stil ayarları */
 input[type="text"],
 input[type="password"],
@@ -78,6 +87,7 @@ h6 {
     margin-top: 5px;
     margin-bottom: 5px;
 }
+
 /* Kayıt düğmesi stil ayarları */
 button {
     display: block;
@@ -93,6 +103,7 @@ button {
     cursor: pointer;
     box-sizing: border-box;
 }
+
 /* Kayıt düğmesi üzerine gelindiğinde stil ayarları */
 button:hover {
     background-color: #0056b3;

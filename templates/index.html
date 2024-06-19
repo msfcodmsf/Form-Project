@@ -20,7 +20,7 @@
                 <a href="index.html" id="logo"
                     style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 15%; height: 100%;"></a>
 
-                <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchPosts()">
+                <input type="text" id="searchBox" placeholder="Search Now" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
                     <span class="theme-mode">
@@ -131,23 +131,23 @@
             <div id="categoryFilter">
                 <div id="leftkatagoricont" data-category="Programlama">
                     <div id="leftkatagoricontfoto"><img src="/static/png/coding.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Programlama</div>
+                    <div id="leftkatagoricontyazı">Programming</div>
                 </div>
 
                 <div id="leftkatagoricont" data-category="Yapay Zeka">
                     <div id="leftkatagoricontfoto"><img src="/static/png/artificial-intelligence.png" width="90%"
                             height="50%"></div>
-                    <div id="leftkatagoricontyazı">Yapay Zeka</div>
+                    <div id="leftkatagoricontyazı">Artificial Intelligence</div>
                 </div>
 
                 <div id="leftkatagoricont" data-category="Oyun Motorları">
                     <div id="leftkatagoricontfoto"><img src="/static/png/ghost.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Oyun Motorları</div>
+                    <div id="leftkatagoricontyazı">Game Engines</div>
                 </div>
 
                 <div id="leftkatagoricont" data-category="Robotik Sistemler">
                     <div id="leftkatagoricontfoto"><img src="/static/png/robot.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Robotik Sistemler</div>
+                    <div id="leftkatagoricontyazı">Robotic Systems</div>
                 </div>
 
                 <div id="leftkatagoricont" data-category="React Native">
@@ -219,7 +219,7 @@
                             <img src="/static/png/delete.png" alt="Delete">
                         </button>
                     </form>
-                    <h4>Kategori</h4>
+                    <h4>Category</h4>
                     {{.CategoriesFormatted}}
                 </div>
             </div>
@@ -229,7 +229,7 @@
 
     <div id="mesajlasmaAlani">
         <div id="mesajlasmaBaslik">
-            <h3>Mesajlaşma Alanı</h3>
+            <h3>Messaging</h3>
         </div>
         <div id="mesajListesi">
             <div class="mesaj ben">
@@ -245,7 +245,7 @@
         </div>
         <div id="mesajGirisi">
             <textarea id="mesajMetni"></textarea>
-            <button id="mesajGonder">Gönder</button>
+            <button id="mesajGonder">Send</button>
         </div>
     </div>
 
@@ -288,7 +288,7 @@
 
             const mesajTarihi = document.createElement("div");
             mesajTarihi.classList.add("mesajTarihi");
-            mesajTarihi.textContent = "şimdi"; // Örnek olarak "şimdi" yazıldı
+            mesajTarihi.textContent = "Now"; // Örnek olarak "şimdi" yazıldı
 
             mesajDiv.appendChild(profilResmi);
             mesajDiv.appendChild(mesajIcerik);

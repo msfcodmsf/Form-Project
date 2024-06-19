@@ -14,8 +14,10 @@ body {
     padding: 20px;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 350px; /* Konteynerı biraz daha genişletiyoruz */
-    position: relative; /* Kapatma tuşunu konumlamak için */
+    width: 350px;
+    /* Konteynerı biraz daha genişletiyoruz */
+    position: relative;
+    /* Kapatma tuşunu konumlamak için */
 }
 
 h1 {
