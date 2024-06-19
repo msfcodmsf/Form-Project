@@ -35,12 +35,14 @@ type Post struct {
 	Title              string
 	Content            string
 	Categories         []string // JSON olarak kaydedilecek ve geri okunacak
+	CategoriesFormatted string   // Virgülle ayrılmış kategoriler
 	CreatedAt          time.Time
 	CreatedAtFormatted string
 	LikeCount          int
 	DislikeCount       int
 	Username           string
 }
+
 
 type Comment struct {
 	ID                 int
@@ -756,60 +758,62 @@ func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
 }
-
 func getFilteredPosts(searchQuery, category string) ([]Post, error) {
-	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
-				COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
-				COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
-				FROM posts
-				JOIN users ON posts.user_id = users.id
-				LEFT JOIN votes ON votes.post_id = posts.id
-				WHERE posts.deleted = 0`
+    query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+              FROM posts
+              JOIN users ON posts.user_id = users.id
+              LEFT JOIN votes ON votes.post_id = posts.id
+              WHERE posts.deleted = 0`
 
-	args := []interface{}{}
-	conditions := []string{}
+    args := []interface{}{} // Sorgu parametreleri için
+    conditions := []string{} // Filtreleme koşulları için
 
-	if searchQuery != "" {
-		conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
-		searchTerm := "%" + searchQuery + "%"
-		args = append(args, searchTerm, searchTerm)
-	}
+    if searchQuery != "" {
+        conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
+        searchTerm := "%" + searchQuery + "%"
+        args = append(args, searchTerm, searchTerm)
+    }
 
-	if category != "" {
-		conditions = append(conditions, "posts.categories LIKE ?")
-		categoryTerm := "%" + category + "%"
-		args = append(args, categoryTerm)
-	}
+    if category != "" {
+        conditions = append(conditions, "posts.categories LIKE ?")
+        categoryTerm := "%" + category + "%"
+        args = append(args, categoryTerm)
+    }
 
-	if len(conditions) > 0 {
-		query += " AND " + strings.Join(conditions, " AND ")
-	}
+    if len(conditions) > 0 {
+        query += " AND " + strings.Join(conditions, " AND ")
+    }
 
-	query += " GROUP BY posts.id ORDER BY posts.created_at DESC"
+    query += " GROUP BY posts.id ORDER BY posts.created_at DESC"
 
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    rows, err := db.Query(query, args...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var posts []Post
-	for rows.Next() {
-		var post Post
-		var categoriesJSON string
-		var username string
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &username, &post.LikeCount, &post.DislikeCount); err != nil {
-			return nil, err
-		}
-		var categories []string
-		if err := json.Unmarshal([]byte(categoriesJSON), &categories); err != nil {
-			return nil, err
-		}
-		post.Categories = categories
+    var posts []Post
+    for rows.Next() {
+        var post Post
+        var categoriesJSON string
+        var username string
+        if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &username, &post.LikeCount, &post.DislikeCount); err != nil {
+            return nil, err
+        }
+        var categories []string
+        if err := json.Unmarshal([]byte(categoriesJSON), &categories); err != nil {
+            return nil, err
+        }
+        post.Categories = categories
 
-		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
-		post.Username = username
-		posts = append(posts, post)
-	}
-	return posts, nil
+        // Kategorileri virgülle ayırarak birleştir
+        post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+
+        post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+        post.Username = username
+        posts = append(posts, post)
+    }
+    return posts, nil
 }

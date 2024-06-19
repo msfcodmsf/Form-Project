@@ -1,34 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="/static/css/myprofil.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/bar.css">
-    <title>Document</title>
-</head>
-
-<body>
-
-    <!-- Üst çubuk -->
+<link rel="stylesheet" type="text/css" href="/static/css/bar.css">
+<!-- header.html -->
+<div class="navbar">
+    <!-- Üst bar içeriği buraya gelecek -->
     <div id="bigbar">
         <div id="düzenbar">
             <div id="bar">
                 <!-- Logo -->
-                <a href="index.html" id="logo"
-                    style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
+                <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; width: 120px; height: 120px;"></a>
 
                 <input type="text" id="searchBox" placeholder="Arama Yapınız" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
                     <span class="theme-mode">
                         <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
-                            <i id="themeIcon" class="fas fa-sun"></i></a>
+                            </a>
                     </span>
                 </div>
                 <div id="girişbar">
                     <nav>
+                        <!-- Giriş durumuna göre menü -->
+                        {{if .LoggedIn}}
+                        <div id="myprofil">
+                            <a href="/myprofil"><img width="80%" height="100%" src="/static/png/pp.png"></a>
+                        </div>
                         <a href="/logout" id="logoutButton" class="button">Log Out</a>
                         <!-- Hoş geldiniz popup'ı -->
                         <script>
@@ -48,7 +42,7 @@
                                 // Tema moduna göre popup rengini ayarla
                                 const popupElement = welcomePopup.querySelector('#popup');
                                 const theme = localStorage.getItem("tema") ||
-                                    "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
+                                "light"; // Eğer tema daha önce kaydedilmişse kullan, yoksa "light"
                                 if (theme === "dark") {
                                     popupElement.style.backgroundColor = "rgb(239, 242, 246)";
                                     popupElement.style.color = "black";
@@ -69,7 +63,7 @@
                             // Çıkış yap butonuna tıklandığında onay popup'ı göster ve localStorage'ı temizle
                             document.querySelector('#logoutButton').addEventListener('click', function (event) {
                                 event
-                                    .preventDefault(); // Bağlantının varsayılan davranışını engelle (sayfayı yenileme)
+                            .preventDefault(); // Bağlantının varsayılan davranışını engelle (sayfayı yenileme)
 
                                 // Onay popup'ını göster
                                 if (confirm('Are you sure you want to log out?')) {
@@ -81,65 +75,14 @@
                                 }
                             });
                         </script>
+
+                        {{else}}
+                        <a href="/login" class="button">Log In</a>
+                        <a href="/register" class="button">Register</a>
+                        {{end}}
                     </nav>
                 </div>
             </div>
         </div>
     </div>
-    <div id="görünmezbar"></div>
-    <!-- Profil container -->
-    <!-- Profil Container -->
-    <div id="profileContainer">
-        <!-- Geri Dön Butonu -->
-        <button id="backButton" onclick="closeLogin()">Back to home</button>
-        <!-- Profil Resmi -->
-        <img id="profilePicture" src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı">
-        <!-- Profil Adı -->
-        <h2 id="profileName">Liyan</h2>
-        <!-- Profil Bilgileri -->
-        <div id="profileInfo">
-            <p><strong>Yaş:</strong> 21</p>
-            <p><strong>Katılım:</strong> 29 Mayıs 2024</p>
-            <p><strong>Son Etkinlik:</strong> Az Önce (Üye profilini görüntülüyor Liyan)</p>
-        </div>
-        <!-- Profil İstatistikleri -->
-        <div id="profileStats">
-            <div>
-                <p><strong>Mesajlarım</strong></p>
-                <p>10</p>
-            </div>
-            <div>
-                <p><strong>Beğenilen Postlarım</strong></p>
-                <p>2</p>
-            </div>
-            <div>
-                <p><strong>Beğenilen Yorumlarım</strong></p>
-                <p>768</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- JS betikleri, bunu çıkarınca tema çalışmıyor -->
-    <script src="/static/scripts.js"></script>
-    <!-- Tema değiştirme betiği -->
-    <script>
-        // Sayfa yüklendiğinde temayı ayarla
-        window.onload = function () {
-            let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
-            document.body.classList.add(tema + "-mode"); // Varsa "light-mode" veya "dark-mode" ekle
-        };
-
-        // Tema değiştirme düğmesini dinle
-        document.getElementById('themeToggle').addEventListener('click', function () {
-            const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
-            changeTheme(currentTheme);
-        });
-
-        // Giriş sayfasına yönlendirme fonksiyonu
-        function closeLogin() {
-            window.location.href = 'index.html';
-        }
-    </script>
-</body>
-
-</html>
+</div>
