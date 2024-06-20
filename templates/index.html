@@ -129,6 +129,10 @@
         </a>
         <div id="categoryFilter" onchange="filterByCategory()">
             <div id="categoryFilter">
+                <div id="leftkatagoricont" data-category="Veri Tabanı">
+                    <div id="leftkatagoricontfoto"><img src="/static/png/database.png" width="90%" height="50%"></div>
+                    <div id="leftkatagoricontyazı">Database</div>
+                </div>
                 <div id="leftkatagoricont" data-category="Programlama">
                     <div id="leftkatagoricontfoto"><img src="/static/png/coding.png" width="90%" height="50%"></div>
                     <div id="leftkatagoricontyazı">Programming</div>
@@ -207,7 +211,7 @@
                         </li>
                     </ul>
                     <ul>
-                        <li> {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes </li>
+                        <li> {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes {{.CommentCount}} Comments</li>
                     </ul>
 
                 </div>
@@ -313,7 +317,8 @@
             posts.forEach(post => {
                 const title = post.querySelector('h3 a').textContent.toLowerCase();
                 const content = post.querySelector('ul li').textContent.toLowerCase();
-                post.style.display = title.includes(filter) || content.includes(filter) ? '' : 'none';
+                const username = post.querySelector('#name').textContent.toLowerCase();
+                post.style.display = title.includes(filter) || content.includes(filter) || username.includes(filter) ? '' : 'none';
             });
         }
 
@@ -364,5 +369,4 @@
     </script>
 
 </body>
-
 </html>
