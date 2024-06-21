@@ -43,9 +43,10 @@
         <!-- Profil Resmi -->
         <img id="profilePicture" src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı">
         <!-- Profil Adı -->
-        <h2 id="profileName">{{.Username}}</h2>
+        <h2 id="profileName">{{if .Username.Valid}}{{.Username.String}}{{else}}{{.Name}}{{end}}</h2>
         <!-- Profil Bilgileri -->
         <div id="profileInfo">
+            <p><strong>Email:</strong> {{.Email}}</p>
             <p><strong>Age:</strong> 21</p>
             <p><strong>Participation:</strong> 29 Mayıs 2024</p>
             <p><strong>Last Event:</strong> Just Now (Viewing member profile msf_snc)</p>

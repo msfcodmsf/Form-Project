@@ -36,38 +36,34 @@
         <form method="post" action="/register">
             <!-- Email alanı -->
             <label for="email">Email</label>
-            <input type="text" id="email" name="email" required>
+            <input type="text" id="email" name="email" value="{{.Email}}" required>
             <!-- Email hata mesajı -->
-            {{if .Email}}
-            <div style="color:red">{{.Email}}</div>
+            {{with .ErrorMessages.Email}}
+            <div style="color:red">{{.}}</div>
             {{end}}
             <br>
             <!-- Kullanıcı adı alanı -->
             <label for="username">Username</label>
-            <input type="text" id="username" name="username" maxlength="20" required>
+            <input type="text" id="username" name="username" maxlength="20" value="{{.Username}}" required>
             <!-- Kullanıcı adı hata mesajı -->
-            {{if .Username}}
-            <div style="color:red">{{.Username}}</div>
-            {{else}}
-            <h6>Username must be at least 4 characters long.</h6>
+            {{with .ErrorMessages.Username}}
+            <div style="color:red">{{.}}</div>
             {{end}}
             <br>
             <!-- Şifre alanı -->
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
             <!-- Şifre hata mesajı -->
-            {{if .Password}}
-            <div style="color:red">{{.Password}}</div>
-            {{else}}
-            <h6>Password must be at least 6 characters long.</h6>
+            {{with .ErrorMessages.Password}}
+            <div style="color:red">{{.}}</div>
             {{end}}
             <br>
             <!-- Şifre tekrar alanı -->
             <label for="confirm_password">Confirm Password</label>
             <input type="password" id="confirm_password" name="confirm_password" required>
             <!-- Şifre tekrar hata mesajı -->
-            {{if .ConfirmPassword}}
-            <div style="color:red">{{.ConfirmPassword}}</div>
+            {{with .ErrorMessages.ConfirmPassword}}
+            <div style="color:red">{{.}}</div>
             {{end}}
 
             <!-- Kayıt düğmesi -->
@@ -76,7 +72,7 @@
 
         <!-- Google ile giriş düğmesi -->
         <a href="/google/login"><button class="google-btn">Register with Google</button></a>
- 
+
         <!-- Tema değiştirme düğmesi -->
         <button id="themeToggle">Toggle Theme</button>
 

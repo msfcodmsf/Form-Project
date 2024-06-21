@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -54,16 +55,19 @@ func init() {
 		RedirectURL:  "http://localhost:8065/google/callback",
 		ClientID:     config.GoogleClientID,
 		ClientSecret: config.GoogleClientSecret,
-		Scopes:       []string{"profile", "email"},
-		Endpoint:     google.Endpoint,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+		Endpoint: google.Endpoint,
 	}
 }
 
 type User struct {
-	ID       int    `validate:"-"`
-	Email    string `validate:"required,email"`
-	Username string `validate:"required,alphanum,min=3,max=20"`
-	Password string `validate:"required,min=6"`
+	ID       int            `validate:"-"`
+	Email    string         `validate:"required,email"`
+	Username sql.NullString `validate:"omitempty,alphanum,min=3,max=20"`
+	Password sql.NullString `validate:"omitempty,min=6"`
 }
 
 type Post struct {
@@ -104,6 +108,12 @@ type Session struct {
 	ID     string
 	UserID int
 	Expiry time.Time
+}
+
+type RegisterTemplateData struct {
+	ErrorMessages map[string]string
+	Email         string
+	Username      string
 }
 
 func main() {
@@ -258,10 +268,15 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 		confirmPassword := r.FormValue("confirm_password")
 
-		user := User{
-			Email:    email,
-			Username: username,
-			Password: password,
+		var user User
+		user.Email = email
+		user.Username = sql.NullString{
+			String: username,
+			Valid:  username != "",
+		}
+		user.Password = sql.NullString{
+			String: password,
+			Valid:  password != "",
 		}
 
 		err := validate.Struct(user)
@@ -271,14 +286,20 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 				for _, err := range err.(validator.ValidationErrors) {
 					switch err.Field() {
 					case "Username":
-						errorMessages[err.Field()] = "Username must be at least 4 characters long."
+						errorMessages[err.Field()] = "Username must be alphanumeric and between 3 and 20 characters long."
 					case "Password":
 						errorMessages[err.Field()] = "Password must be at least 6 characters long."
+					case "Email":
+						errorMessages[err.Field()] = "Invalid email format."
 					default:
 						errorMessages[err.Field()] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", err.Field(), err.Tag())
 					}
 				}
-				renderRegisterTemplate(w, errorMessages)
+				renderRegisterTemplate(w, RegisterTemplateData{
+					ErrorMessages: errorMessages,
+					Email:         email,
+					Username:      username,
+				})
 				return
 			}
 			handleErr(w, err, "Invalid input", http.StatusBadRequest)
@@ -288,7 +309,11 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		if password != confirmPassword {
 			errorMessages := make(map[string]string)
 			errorMessages["ConfirmPassword"] = "Password and confirm password do not match."
-			renderRegisterTemplate(w, errorMessages)
+			renderRegisterTemplate(w, RegisterTemplateData{
+				ErrorMessages: errorMessages,
+				Email:         email,
+				Username:      username,
+			})
 			return
 		}
 
@@ -300,7 +325,11 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, err = db.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", email, username, hashedPassword)
 		if err != nil {
-			handleErr(w, err, "Email or username already taken", http.StatusBadRequest)
+			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+				handleErr(w, err, "Email or username already taken", http.StatusBadRequest)
+			} else {
+				handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			}
 			return
 		}
 
@@ -308,17 +337,17 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderRegisterTemplate(w, nil)
+	renderRegisterTemplate(w, RegisterTemplateData{})
 }
 
-func renderRegisterTemplate(w http.ResponseWriter, errorMessages map[string]string) {
+func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
 	tmpl, err := template.ParseFiles("templates/register.html")
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = tmpl.Execute(w, errorMessages)
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
@@ -754,42 +783,42 @@ func viewPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func myProfileHandler(w http.ResponseWriter, r *http.Request) {
-    session, err := getSession(r)
-    if err != nil || session == nil { // Oturum kontrolü
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
+	session, err := getSession(r)
+	if err != nil || session == nil { // Oturum kontrolü
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-    // Kullanıcı bilgilerini veritabanından çekme
-    user, err := getUserByID(session.UserID)
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	// Kullanıcı bilgilerini veritabanından çekme
+	user, err := getUserByID(session.UserID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    // HTML şablonunu parse etme
-    tmpl, err := template.ParseFiles("templates/myprofil.html")
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	// HTML şablonunu parse etme
+	tmpl, err := template.ParseFiles("templates/myprofil.html")
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    // Kullanıcı bilgilerini HTML şablonuna geçirme
-    err = tmpl.Execute(w, user)
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	// Kullanıcı bilgilerini HTML şablonuna geçirme
+	err = tmpl.Execute(w, user)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getUserByID(userID int) (*User, error) {
-    var user User
-    err := db.QueryRow("SELECT id, email, username FROM users WHERE id = ?", userID).
-        Scan(&user.ID, &user.Email, &user.Username)
-    if err != nil {
-        return nil, err
-    }
-    return &user, nil
+	var user User
+	query := "SELECT id, email, username, password FROM users WHERE id = ?"
+	err := db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
@@ -873,15 +902,18 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email, err := getEmailFromGoogle(token)
+	email, name, err := getEmailAndNameFromGoogle(token)
 	if err != nil {
 		http.Error(w, "Failed to get user info from Google", http.StatusInternalServerError)
 		return
 	}
 
-	userID, err := getOrCreateUser(email)
+	// Validate işlemi yapmadan önce gelen ismi uygun hale getirme
+	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5) // Boşlukları kaldırma gibi bir işlem yapabilirsiniz
+
+	userID, err := getOrCreateUser(email, username)
 	if err != nil {
-		http.Error(w, "Failed to save user info", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -901,29 +933,39 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
 
-func getEmailFromGoogle(token *oauth2.Token) (string, error) {
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func getEmailAndNameFromGoogle(token *oauth2.Token) (string, string, error) {
 	client := googleOauthConfig.Client(oauth2.NoContext, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 
 	var userInfo struct {
 		Email string `json:"email"`
+		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return userInfo.Email, nil
+	return userInfo.Email, userInfo.Name, nil
 }
 
-func getOrCreateUser(email string) (int64, error) {
+func getOrCreateUser(email, username string) (int64, error) {
 	var userID int64
 	err := db.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
 	if err == sql.ErrNoRows {
-		res, err := db.Exec("INSERT INTO users (email) VALUES (?)", email)
+		res, err := db.Exec("INSERT INTO users (email, username) VALUES (?, ?)", email, username)
 		if err != nil {
 			return 0, err
 		}
