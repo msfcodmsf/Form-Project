@@ -21,6 +21,10 @@ body.night-mode .register-container {
     color: white;
 }
 
+body.night-mode .mavi-yazi a {
+    color: white;
+}
+
 a {
     margin-left: 30%;
     text-decoration: none;
@@ -107,4 +111,9 @@ button {
 /* Kayıt düğmesi üzerine gelindiğinde stil ayarları */
 button:hover {
     background-color: #0056b3;
+}
+
+.mavi-yazi a {
+    color: black;
+    /* Mavi renk */
 }

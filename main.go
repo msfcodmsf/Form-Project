@@ -155,7 +155,7 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 	http.HandleFunc("/myprofil", myProfileHandler)
-
+	http.HandleFunc("/get_most_liked_posts", getMostLikedPosts)
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
 }
@@ -224,36 +224,48 @@ func createTables() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := getSession(r)
+    session, _ := getSession(r) // Kullanıcının oturum bilgilerini alır
 
-	searchQuery := r.URL.Query().Get("search")
-	category := r.URL.Query().Get("category")
+    sortBy := r.URL.Query().Get("sortBy")     // Sıralama parametresini alır (mostliked, mostcommented veya varsayılan)
+    searchQuery := r.URL.Query().Get("search") // Arama sorgusunu alır
+    category := r.URL.Query().Get("category")   // Kategori filtresini alır
 
-	posts, err := getFilteredPosts(searchQuery, category)
-	if err != nil {
-		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+    posts, err := getFilteredPosts(searchQuery, category, sortBy) // Filtrelenmiş ve sıralanmış gönderileri alır
+    if err != nil {
+        handleErr(w, err, "Internal server error", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
+        return
+    }
 
-	tmpl, err := template.ParseFiles("templates/index.html")
-	if err != nil {
-		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+    tmpl, err := template.ParseFiles("templates/index.html") // index.html şablonunu ayrıştırır
+    if err != nil {
+        handleErr(w, err, "Error parsing template", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
+        return
+    }
 
-	data := struct {
-		Posts    []Post
-		LoggedIn bool
-	}{
-		Posts:    posts,
-		LoggedIn: session != nil,
-	}
+    // Şablona gönderilecek verileri hazırlar
+    data := struct {
+        Posts            []Post   // Gönderi listesi
+        LoggedIn         bool     // Kullanıcının oturum açıp açmadığı bilgisi
+        SortByMostLiked  bool     // Beğeni sayısına göre sıralama aktif mi?
+        SortByMostCommented bool // Yorum sayısına göre sıralama aktif mi?
+        SearchQuery      string   // Arama sorgusu
+        SelectedCategory string   // Seçili kategori
+    }{
+        Posts:            posts,
+        LoggedIn:         session != nil,
+        SortByMostLiked:  sortBy == "mostliked",
+        SortByMostCommented: sortBy == "mostcommented",
+        SearchQuery:      searchQuery,
+        SelectedCategory: category,
+    }
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-	}
+    err = tmpl.Execute(w, data) // Şablonu işleyerek HTML çıktısını oluşturur ve gönderir
+    if err != nil {
+        handleErr(w, err, "Error executing template", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
+    }
 }
+
+
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
@@ -834,8 +846,8 @@ func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getFilteredPosts(searchQuery, category string) ([]Post, error) {
-	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+func getFilteredPosts(searchQuery, category, sortBy string) ([]Post, error) {
+    query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
                      COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
                      (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
@@ -844,50 +856,60 @@ func getFilteredPosts(searchQuery, category string) ([]Post, error) {
               LEFT JOIN votes ON votes.post_id = posts.id
               WHERE posts.deleted = 0`
 
-	args := []interface{}{}  // Sorgu parametreleri için
-	conditions := []string{} // Filtreleme koşulları için
+    args := []interface{}{} // Sorgu parametreleri için
+    conditions := []string{} // Filtreleme koşulları için
 
-	if searchQuery != "" {
-		conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
-		searchTerm := "%" + searchQuery + "%"
-		args = append(args, searchTerm, searchTerm)
-	}
+    if searchQuery != "" {
+        conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
+        searchTerm := "%" + searchQuery + "%"
+        args = append(args, searchTerm, searchTerm)
+    }
 
-	if category != "" {
-		conditions = append(conditions, "posts.categories LIKE ?")
-		categoryTerm := "%" + category + "%"
-		args = append(args, categoryTerm)
-	}
+    if category != "" {
+        conditions = append(conditions, "posts.categories LIKE ?")
+        categoryTerm := "%" + category + "%"
+        args = append(args, categoryTerm)
+    }
 
-	if len(conditions) > 0 {
-		query += " AND " + strings.Join(conditions, " AND ")
-	}
+    if len(conditions) > 0 {
+        query += " AND " + strings.Join(conditions, " AND ")
+    }
 
-	query += " GROUP BY posts.id ORDER BY posts.created_at DESC"
+    // Sıralama (varsayılan olarak oluşturulma tarihine göre azalan sıralama)
+    switch sortBy {
+    case "mostliked":
+        query += " GROUP BY posts.id ORDER BY like_count DESC, posts.created_at DESC" // Beğeni sayısına göre sıralama
+    case "mostcommented": 
+        query += " GROUP BY posts.id ORDER BY comment_count DESC, posts.created_at DESC" // Yorum sayısına göre sıralama
+    default:
+        query += " GROUP BY posts.id ORDER BY posts.created_at DESC" // Oluşturulma tarihine göre sıralama (varsayılan)
+    }
 
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    rows, err := db.Query(query, args...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var posts []Post
-	for rows.Next() {
-		var post Post
-		var categoriesJSON string
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
-			return nil, err
-		}
+    var posts []Post
+    for rows.Next() {
+        var post Post
+        var categoriesJSON string
+        if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+            return nil, err
+        }
+        if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+            return nil, err
+        }
 
-		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
-		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
-		posts = append(posts, post)
-	}
-	return posts, nil
+        post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+        post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+        posts = append(posts, post)
+    }
+    return posts, nil
 }
+
+
 
 func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	url := googleOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
@@ -1025,4 +1047,40 @@ func getSession(r *http.Request) (*Session, error) {
 	session.Expiry = newExpiry
 
 	return &session, nil
+}
+
+func getMostLikedPosts(w http.ResponseWriter, r *http.Request) {
+	session, _ := getSession(r)
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+    posts, err := getFilteredPosts("", "", "mostliked")
+    if err != nil {
+        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+    
+    tmpl, err := template.ParseFiles("templates/index.html")
+    if err != nil {
+        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    data := struct {
+        Posts     []Post
+        LoggedIn  bool
+        SortByMostLiked bool
+    }{
+        Posts:     posts,
+        LoggedIn:  session != nil,
+        SortByMostLiked: true,
+    }
+
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+    }
 }

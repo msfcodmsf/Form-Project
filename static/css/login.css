@@ -27,6 +27,10 @@ body.night-mode .login-container {
     /* Gece modunda metin rengi */
 }
 
+body.night-mode .mavi-yazi a {
+    color: white;
+}
+
 a {
     margin-left: 28%;
     text-decoration: none;
@@ -145,4 +149,9 @@ button {
 button:hover {
     background-color: #0056b3;
     /* Arka plan rengi */
+}
+
+.mavi-yazi a {
+    color: black;
+    /* Mavi renk */
 }
