@@ -108,7 +108,9 @@ a {
     width: 90%;
     padding-left: 10px;
     color: var(--text-color);
-}
+    user-select: none; /* Metni seçilemez yap */
+    pointer-events: none; /* Metnin üzerine tıklama ve imleç olaylarını engelle */
+  }
 
 #leftkatagoricontfoto {
     height: 90%;
