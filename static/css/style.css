@@ -145,7 +145,6 @@ a {
     background-color: var(--button-hover-color);
 }
 
-<<<<<<< Updated upstream
 #filtre a {
     /* Yeni eklenen stil */
     display: flex;
@@ -160,15 +159,6 @@ a {
     /* Linkin kutucuğun tamamını kaplaması için */
     padding: 0;
     /* İç boşluğu sıfırla */
-=======
-#filtre a { /* Yeni eklenen stil */
-    display: flex; /* Flexbox kullanarak hizalama */
-    align-items: center; /* Dikeyde ortala */
-    justify-content: center; /* Yatayda ortala */
-    width: 100%; /* Linkin kutucuğun tamamını kaplaması için */
-    height: 100%; /* Linkin kutucuğun tamamını kaplaması için */
-    padding: 0; /* İç boşluğu sıfırla */
->>>>>>> Stashed changes
 }
 
 
