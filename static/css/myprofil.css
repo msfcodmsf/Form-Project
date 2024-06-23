@@ -21,6 +21,13 @@
      /* Gece modu metin rengi */
  }
 
+ body.night-mode #centercont {
+    background-color: rgb(29, 38, 49);
+    /* Gece modu arka plan rengi */
+    color: white;
+    /* Gece modu metin rengi */
+}
+
  body.night-mode #profileContainer {
      background-color: rgb(29, 38, 49);
      /* Gece modu arka plan rengi */
@@ -28,15 +35,112 @@
      /* Gece modu metin rengi */
  }
 
- /* Profil Container */
  #profileContainer {
-     background-color: #fff;
+     display: flex;
+     align-items: flex-start;
+     margin: 20px;
+     background-color: white;
+     padding: 130px;
      border-radius: 8px;
-     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-     height: 40%;
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+     width: 40%;
+     /* Profil container'ını sayfanın ortasına hizalamak için */
+     margin-left: auto;
+     /* Profil container'ını sayfanın ortasına hizalamak için */
+     margin-right: auto;
+     /* Profil container'ını sayfanın ortasına hizalamak için */
+ }
+
+ #profileLeft {
+     margin-right: 10px;
+     /* Profil resmi ile bilgi arası boşluk */
+ }
+
+ #profileRight {
+     flex-grow: 1;
+     /* Kalan alanı kapla */
+ }
+
+ #profilePicture {
+     width: 150px;
+     /* Profil resmi boyutu */
+     height: 150px;
+     border-radius: 50%;
+     object-fit: cover;
+     margin-right: 20px;
+ }
+
+ #postsContainer {
      width: 50%;
-     text-align: center;
-     margin-top: 3%;
+     /* Sekmelerin ve içeriğin genişliğini ayarla */
+     margin-left: auto;
+     /* Profil container'ını sayfanın ortasına hizalamak için */
+     margin-right: auto;
+     /* Profil container'ını sayfanın ortasına hizalamak için */
+ }
+
+ .tabs {
+     list-style: none;
+     padding: 0;
+     display: flex;
+     /* Sekmeleri yatay olarak hizalar */
+     border-bottom: 1px solid #ddd;
+ }
+
+ .tab {
+     padding: 10px 15px;
+     cursor: pointer;
+ }
+
+ .tab.active {
+     border-bottom: 2px solid #007bff;
+     /* Aktif sekmenin alt çizgisi */
+ }
+
+ .tab-content {
+     display: none;
+     padding: 20px;
+     animation: fadeOut 0.3s ease-in-out;
+     /* Başlangıçta fadeOut animasyonu */
+ }
+
+ .tab-content.active {
+     display: block;
+     animation: fadeIn 0.3s ease-in-out;
+     /* Aktif olduğunda fadeIn animasyonu */
+ }
+
+ @keyframes fadeIn {
+     from {
+         opacity: 0;
+     }
+
+     to {
+         opacity: 1;
+     }
+ }
+
+ @keyframes fadeOut {
+     from {
+         opacity: 1;
+     }
+
+     to {
+         opacity: 0;
+     }
+ }
+
+ .postSection {
+     flex: 1;
+     min-width: 300px;
+     margin-right: 20px;
+ }
+
+ #likedPosts {
+     overflow-y: auto;
+     /* or overflow: auto; */
+     max-height: 300px;
+     /* Optional: Set a maximum height */
  }
 
  /* Geri Dön Butonu */
@@ -146,4 +250,13 @@
  .back-button:hover {
      background-color: #0056b3;
      /* Hover durumu arka plan rengi */
+ }
+
+
+ #centercont {
+     width: 80%;
+     padding: 20px;
+     margin-top: 2%;
+     border-radius: 10px 10px 10px 10px;
+     background-color: rgb(255, 255, 255);
  }
