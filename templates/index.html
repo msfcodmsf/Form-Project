@@ -187,8 +187,13 @@
     <!-- Ana içerik alanı -->
     <div id="center">
         <div id="filtrecont">
+<<<<<<< Updated upstream
             <div id="filtre"><a href="/?filter=most_liked">Most Liked</a></div>
             <div id="filtre"><a href="/?filter=most_commented">Most Commented</a></div>
+=======
+            <div id="filtre"><a href="?sortBy=mostliked">Most Liked</a></div>            
+            <div id="filtre"><a href="?sortBy=mostcommented" class="{{if .SortByMostCommented}}active{{end}}">Most Comment</a></div>
+>>>>>>> Stashed changes
             <div id="filtre"></div>
             <div id="filtre"></div>
         </div>
@@ -211,8 +216,7 @@
                         </li>
                     </ul>
                     <ul>
-                        <li> {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes
-                            {{.CommentCount}} Comments</li>
+                        <li> {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes {{.CommentCount}} Comments</li>
                     </ul>
 
                 </div>
@@ -319,8 +323,7 @@
                 const title = post.querySelector('h3 a').textContent.toLowerCase();
                 const content = post.querySelector('ul li').textContent.toLowerCase();
                 const username = post.querySelector('#name').textContent.toLowerCase();
-                post.style.display = title.includes(filter) || content.includes(filter) || username.includes(
-                    filter) ? '' : 'none';
+                post.style.display = title.includes(filter) || content.includes(filter) || username.includes(filter) ? '' : 'none';
             });
         }
 
@@ -371,5 +374,4 @@
     </script>
 
 </body>
-
 </html>
