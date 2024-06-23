@@ -101,6 +101,7 @@ a {
     border-radius: 5px;
     transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
     font-family: 'Arial', sans-serif;
+    box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #leftkatagoricontyazı {
@@ -130,14 +131,14 @@ a {
 
 #filtre {
     width: 15%;
-    height: 75%;
+    height: 100%;
     float: left;
     margin-right: 5%;
     text-align: center;
-    padding-top: 12px;
     background-color: rgb(239, 242, 246);
     border-radius: 5px;
     transition: background-color 1.2s;
+    box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #filtre:hover {
@@ -146,14 +147,20 @@ a {
 
 #filtre a {
     /* Yeni eklenen stil */
-    display: block;
-    /* Linkin tüm kutucuğu kaplamasını sağlar */
-    /* İç boşluk */
-    text-align: center;
-    text-decoration: none;
-    color: inherit;
-    /* Metin rengini kapsayıcıdan miras alır */
+    display: flex;
+    /* Flexbox kullanarak hizalama */
+    align-items: center;
+    /* Dikeyde ortala */
+    justify-content: center;
+    /* Yatayda ortala */
+    width: 100%;
+    /* Linkin kutucuğun tamamını kaplaması için */
+    height: 100%;
+    /* Linkin kutucuğun tamamını kaplaması için */
+    padding: 0;
+    /* İç boşluğu sıfırla */
 }
+
 
 /**CENTER CONTAINER**/
 .post {

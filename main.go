@@ -66,8 +66,8 @@ func init() {
 type User struct {
 	ID       int            `validate:"-"`
 	Email    string         `validate:"required,email"`
-	Username sql.NullString `validate:"omitempty,alphanum,min=3,max=20"`
-	Password sql.NullString `validate:"omitempty,min=6"`
+	Username sql.NullString // Google kayıtta bazen boş olabilir
+	Password sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
 }
 
 type Post struct {
@@ -95,13 +95,6 @@ type Comment struct {
 	LikeCount          int
 	DislikeCount       int
 	Username           string // Kullanıcı adı
-}
-
-type Like struct {
-	ID        int
-	UserID    int
-	PostID    sql.NullInt64
-	CommentID sql.NullInt64
 }
 
 type Session struct {
@@ -155,7 +148,8 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 	http.HandleFunc("/myprofil", myProfileHandler)
-	http.HandleFunc("/get_most_liked_posts", getMostLikedPosts)
+	http.HandleFunc("/deleteUser", deleteUserHandler)
+
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
 }
@@ -170,8 +164,8 @@ func createTables() {
 		`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
-            username TEXT UNIQUE,
-            password TEXT
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
         );`,
 		`CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,26 +173,16 @@ func createTables() {
             title TEXT,
             content TEXT,
             categories TEXT,
-            created_at TIMESTAMP
+            created_at TIMESTAMP,
+			deleted INTEGER DEFAULT 0
         );`,
 		`CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             post_id INTEGER,
             user_id INTEGER,
             content TEXT,
-            created_at TIMESTAMP
-        );`,
-		`CREATE TABLE IF NOT EXISTS likes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            post_id INTEGER,
-            comment_id INTEGER
-        );`,
-		`CREATE TABLE IF NOT EXISTS Dislikes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            post_id INTEGER,
-            comment_id INTEGER
+            created_at TIMESTAMP,
+			deleted INTEGER DEFAULT 0
         );`,
 		`CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
@@ -224,48 +208,37 @@ func createTables() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-    session, _ := getSession(r) // Kullanıcının oturum bilgilerini alır
+	session, _ := getSession(r)
 
-    sortBy := r.URL.Query().Get("sortBy")     // Sıralama parametresini alır (mostliked, mostcommented veya varsayılan)
-    searchQuery := r.URL.Query().Get("search") // Arama sorgusunu alır
-    category := r.URL.Query().Get("category")   // Kategori filtresini alır
+	searchQuery := r.URL.Query().Get("search")
+	category := r.URL.Query().Get("category")
+	filter := r.URL.Query().Get("filter")
 
-    posts, err := getFilteredPosts(searchQuery, category, sortBy) // Filtrelenmiş ve sıralanmış gönderileri alır
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
-        return
-    }
+	posts, err := getFilteredPosts(searchQuery, category, filter, nil)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    tmpl, err := template.ParseFiles("templates/index.html") // index.html şablonunu ayrıştırır
-    if err != nil {
-        handleErr(w, err, "Error parsing template", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
-        return
-    }
+	tmpl, err := template.ParseFiles("templates/index.html")
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    // Şablona gönderilecek verileri hazırlar
-    data := struct {
-        Posts            []Post   // Gönderi listesi
-        LoggedIn         bool     // Kullanıcının oturum açıp açmadığı bilgisi
-        SortByMostLiked  bool     // Beğeni sayısına göre sıralama aktif mi?
-        SortByMostCommented bool // Yorum sayısına göre sıralama aktif mi?
-        SearchQuery      string   // Arama sorgusu
-        SelectedCategory string   // Seçili kategori
-    }{
-        Posts:            posts,
-        LoggedIn:         session != nil,
-        SortByMostLiked:  sortBy == "mostliked",
-        SortByMostCommented: sortBy == "mostcommented",
-        SearchQuery:      searchQuery,
-        SelectedCategory: category,
-    }
+	data := struct {
+		Posts    []Post
+		LoggedIn bool
+	}{
+		Posts:    posts,
+		LoggedIn: session != nil,
+	}
 
-    err = tmpl.Execute(w, data) // Şablonu işleyerek HTML çıktısını oluşturur ve gönderir
-    if err != nil {
-        handleErr(w, err, "Error executing template", http.StatusInternalServerError) // Hata durumunda hata mesajı gösterir
-    }
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
-
-
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
@@ -274,57 +247,96 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
 		email := r.FormValue("email")
-		username := r.FormValue("username")
 		password := r.FormValue("password")
 		confirmPassword := r.FormValue("confirm_password")
+		googleOAuth := r.FormValue("google_oauth") // Check if Google OAuth info is present
 
 		var user User
-		user.Email = email
-		user.Username = sql.NullString{
-			String: username,
-			Valid:  username != "",
+
+		if googleOAuth == "true" {
+			// Handle Google OAuth registration
+			code := r.FormValue("code")
+			token, err := googleOauthConfig.Exchange(r.Context(), code)
+			if err != nil {
+				http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+				return
+			}
+
+			email, name, err := getEmailAndNameFromGoogle(token)
+			if err != nil {
+				http.Error(w, "Failed to get user info from Google", http.StatusInternalServerError)
+				return
+			}
+
+			// Generate a username based on Google name
+			username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
+
+			// Insert or retrieve user ID
+			userID, err := getOrCreateUser(email, username)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
+				return
+			}
+
+			sessionToken, err := createSession(userID)
+			if err != nil {
+				http.Error(w, "Failed to create session", http.StatusInternalServerError)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session_token",
+				Value:    sessionToken,
+				Path:     "/",
+				HttpOnly: true,
+			})
+
+			http.Redirect(w, r, "/myprofil", http.StatusSeeOther)
+			return
 		}
-		user.Password = sql.NullString{
-			String: password,
-			Valid:  password != "",
+
+		// Handle traditional registration
+		username := r.FormValue("username")
+
+		user = User{
+			Email:    email,
+			Username: sql.NullString{String: username, Valid: true}, // Google kaydında null olmayacak
+			Password: sql.NullString{String: password, Valid: true}, // Google kaydında null olmayacak
 		}
 
 		err := validate.Struct(user)
 		if err != nil {
-			if _, ok := err.(validator.ValidationErrors); ok {
-				errorMessages := make(map[string]string)
-				for _, err := range err.(validator.ValidationErrors) {
-					switch err.Field() {
-					case "Username":
-						errorMessages[err.Field()] = "Username must be alphanumeric and between 3 and 20 characters long."
-					case "Password":
-						errorMessages[err.Field()] = "Password must be at least 6 characters long."
-					case "Email":
-						errorMessages[err.Field()] = "Invalid email format."
-					default:
-						errorMessages[err.Field()] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", err.Field(), err.Tag())
-					}
+			errorMessages := make(map[string]string)
+			for _, err := range err.(validator.ValidationErrors) {
+				field := err.Field()
+				switch field {
+				case "Username":
+					errorMessages[field] = "Username must be alphanumeric and between 3 and 20 characters long."
+				case "Password":
+					errorMessages[field] = "Password must be at least 6 characters long."
+				case "Email":
+					errorMessages[field] = "Invalid email format."
+				default:
+					errorMessages[field] = fmt.Sprintf("Validation error for '%s' failed on the '%s' tag", field, err.Tag())
 				}
-				renderRegisterTemplate(w, RegisterTemplateData{
-					ErrorMessages: errorMessages,
-					Email:         email,
-					Username:      username,
-				})
-				return
 			}
-			handleErr(w, err, "Invalid input", http.StatusBadRequest)
+			renderRegisterTemplate(w, RegisterTemplateData{
+				ErrorMessages: errorMessages,
+				Email:         user.Email,
+				Username:      user.Username.String,
+			})
 			return
 		}
 
 		if password != confirmPassword {
-			errorMessages := make(map[string]string)
-			errorMessages["ConfirmPassword"] = "Password and confirm password do not match."
+			errorMessages := map[string]string{"ConfirmPassword": "Password and confirm password do not match."}
 			renderRegisterTemplate(w, RegisterTemplateData{
 				ErrorMessages: errorMessages,
-				Email:         email,
-				Username:      username,
+				Email:         user.Email,
+				Username:      user.Username.String,
 			})
 			return
 		}
@@ -335,7 +347,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = db.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", email, username, hashedPassword)
+		_, err = db.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", user.Email, user.Username.String, hashedPassword)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 				handleErr(w, err, "Email or username already taken", http.StatusBadRequest)
@@ -347,9 +359,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
-	}
 
-	renderRegisterTemplate(w, RegisterTemplateData{})
+	default: // GET request
+		renderRegisterTemplate(w, RegisterTemplateData{})
+	}
 }
 
 func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
@@ -603,6 +616,63 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
 }
 
+func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	session, err := getSession(r)
+	if err != nil {
+		handleErr(w, err, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userID := session.UserID
+
+	// Kullanıcıya ait postların ve yorumların kullanıcı adını anonim olarak güncelle
+	_, err = db.Exec(`UPDATE posts SET username = 'Anonim Kullanıcı' WHERE user_id = ?`, userID)
+	if err != nil {
+		handleErr(w, err, "Error updating posts", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = db.Exec(`UPDATE comments SET username = 'Anonim Kullanıcı' WHERE user_id = ?`, userID)
+	if err != nil {
+		handleErr(w, err, "Error updating comments", http.StatusInternalServerError)
+		return
+	}
+
+	// Kullanıcıyı veritabanından sil
+	_, err = db.Exec(`DELETE FROM users WHERE id = ?`, userID)
+	if err != nil {
+		handleErr(w, err, "Error deleting user", http.StatusInternalServerError)
+		return
+	}
+
+	// Kullanıcının oturumlarını sil
+	_, err = db.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID)
+	if err != nil {
+		handleErr(w, err, "Error deleting user sessions", http.StatusInternalServerError)
+		return
+	}
+
+	// Oturum çerezini temizle
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		HttpOnly: true,
+	})
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func voteHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
 	if err != nil || session == nil {
@@ -808,6 +878,19 @@ func myProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Kullanıcının kendi gönderilerini ve beğendiği gönderileri alın
+	ownPosts, err := getOwnPosts(session.UserID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	likedPosts, err := getLikedPosts(session.UserID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	// HTML şablonunu parse etme
 	tmpl, err := template.ParseFiles("templates/myprofil.html")
 	if err != nil {
@@ -815,12 +898,102 @@ func myProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := struct {
+		User       *User
+		OwnPosts   []Post
+		LikedPosts []Post
+	}{
+		User:       user,
+		OwnPosts:   ownPosts,
+		LikedPosts: likedPosts,
+	}
+
 	// Kullanıcı bilgilerini HTML şablonuna geçirme
-	err = tmpl.Execute(w, user)
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func getOwnPosts(userID int) ([]Post, error) {
+	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
+                     (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
+              FROM posts
+              JOIN users ON posts.user_id = users.id
+              LEFT JOIN votes ON votes.post_id = posts.id
+              WHERE posts.user_id = ? AND posts.deleted = 0
+              GROUP BY posts.id
+              ORDER BY posts.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func getLikedPosts(userID int) ([]Post, error) {
+	query := `
+		SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+		       COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+		       COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
+		       (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
+		FROM posts
+		JOIN users ON posts.user_id = users.id
+		LEFT JOIN votes ON votes.post_id = posts.id
+		WHERE posts.id IN (SELECT post_id FROM votes WHERE user_id = ? AND vote_type = 1)
+		AND posts.deleted = 0
+		GROUP BY posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username
+		ORDER BY posts.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post)
+	}
+
+	if len(posts) == 0 {
+		log.Println("Kullanıcının beğendiği post bulunamadı")
+	} else {
+		log.Printf("Kullanıcının beğendiği %d post bulundu\n", len(posts))
+	}
+	return posts, nil
 }
 
 func getUserByID(userID int) (*User, error) {
@@ -828,6 +1001,9 @@ func getUserByID(userID int) (*User, error) {
 	query := "SELECT id, email, username, password FROM users WHERE id = ?"
 	err := db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user with ID %d not found", userID)
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -846,8 +1022,8 @@ func sifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getFilteredPosts(searchQuery, category, sortBy string) ([]Post, error) {
-    query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post, error) {
+	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
                      COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
                      (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
@@ -856,60 +1032,64 @@ func getFilteredPosts(searchQuery, category, sortBy string) ([]Post, error) {
               LEFT JOIN votes ON votes.post_id = posts.id
               WHERE posts.deleted = 0`
 
-    args := []interface{}{} // Sorgu parametreleri için
-    conditions := []string{} // Filtreleme koşulları için
+	args := []interface{}{}  // Sorgu parametreleri için
+	conditions := []string{} // Filtreleme koşulları için
 
-    if searchQuery != "" {
-        conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
-        searchTerm := "%" + searchQuery + "%"
-        args = append(args, searchTerm, searchTerm)
-    }
+	if searchQuery != "" {
+		conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
+		searchTerm := "%" + searchQuery + "%"
+		args = append(args, searchTerm, searchTerm)
+	}
 
-    if category != "" {
-        conditions = append(conditions, "posts.categories LIKE ?")
-        categoryTerm := "%" + category + "%"
-        args = append(args, categoryTerm)
-    }
+	if category != "" {
+		conditions = append(conditions, "posts.categories LIKE ?")
+		categoryTerm := "%" + category + "%"
+		args = append(args, categoryTerm)
+	}
 
-    if len(conditions) > 0 {
-        query += " AND " + strings.Join(conditions, " AND ")
-    }
+	if userID != nil {
+		conditions = append(conditions, "(posts.user_id = ? OR posts.id IN (SELECT post_id FROM likes WHERE user_id = ?))")
+		args = append(args, *userID, *userID)
+	}
 
-    // Sıralama (varsayılan olarak oluşturulma tarihine göre azalan sıralama)
-    switch sortBy {
-    case "mostliked":
-        query += " GROUP BY posts.id ORDER BY like_count DESC, posts.created_at DESC" // Beğeni sayısına göre sıralama
-    case "mostcommented": 
-        query += " GROUP BY posts.id ORDER BY comment_count DESC, posts.created_at DESC" // Yorum sayısına göre sıralama
-    default:
-        query += " GROUP BY posts.id ORDER BY posts.created_at DESC" // Oluşturulma tarihine göre sıralama (varsayılan)
-    }
+	if len(conditions) > 0 {
+		query += " AND " + strings.Join(conditions, " AND ")
+	}
 
-    rows, err := db.Query(query, args...)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	query += " GROUP BY posts.id"
 
-    var posts []Post
-    for rows.Next() {
-        var post Post
-        var categoriesJSON string
-        if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
-            return nil, err
-        }
-        if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
-            return nil, err
-        }
+	switch filter {
+	case "most_liked":
+		query += " ORDER BY like_count DESC"
+	case "most_commented":
+		query += " ORDER BY comment_count DESC"
+	default:
+		query += " ORDER BY posts.created_at DESC"
+	}
 
-        post.CategoriesFormatted = strings.Join(post.Categories, ", ")
-        post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
-        posts = append(posts, post)
-    }
-    return posts, nil
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post)
+	}
+	return posts, nil
 }
-
-
 
 func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	url := googleOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
@@ -1039,7 +1219,7 @@ func getSession(r *http.Request) (*Session, error) {
 	}
 
 	// Oturum süresini her kontrol ettiğimizde uzatalım
-	newExpiry := time.Now().Add(1 * time.Minute)
+	newExpiry := time.Now().Add(10 * time.Minute)
 	_, err = db.Exec("UPDATE sessions SET expiry = ? WHERE id = ?", newExpiry, sessionToken)
 	if err != nil {
 		return nil, err
@@ -1047,40 +1227,4 @@ func getSession(r *http.Request) (*Session, error) {
 	session.Expiry = newExpiry
 
 	return &session, nil
-}
-
-func getMostLikedPosts(w http.ResponseWriter, r *http.Request) {
-	session, _ := getSession(r)
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-    posts, err := getFilteredPosts("", "", "mostliked")
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    
-    tmpl, err := template.ParseFiles("templates/index.html")
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-
-    data := struct {
-        Posts     []Post
-        LoggedIn  bool
-        SortByMostLiked bool
-    }{
-        Posts:     posts,
-        LoggedIn:  session != nil,
-        SortByMostLiked: true,
-    }
-
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-    }
 }

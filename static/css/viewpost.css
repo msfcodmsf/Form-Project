@@ -132,6 +132,7 @@ body {
   /* Mutlaka bu özelliği ekleyin */
   padding-left: 2px;
   /* Çizgiyi içeriğin başlangıcından itibaren ayarlayın */
+  box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #centercont::before {
@@ -140,7 +141,7 @@ body {
   /* Çizgi kalınlığı */
   height: 100%;
   /* Öğenin yüksekliği kadar */
-  background-color: #000;
+  background-color: rgb(22, 59, 97);
   /* Çizgi rengi */
   position: absolute;
   left: 17%;
