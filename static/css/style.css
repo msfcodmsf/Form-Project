@@ -1,10 +1,10 @@
 /* General styles */
+
 html,
 body {
     height: 100%;
     width: 100%;
     margin: 0;
-    overflow: auto;
     background-color: var(--background-color);
     color: var(--text-color);
     font-family: 'Arial', sans-serif;
@@ -101,12 +101,17 @@ a {
     border-radius: 5px;
     transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
     font-family: 'Arial', sans-serif;
+    box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #leftkatagoricontyazı {
     width: 90%;
     padding-left: 10px;
     color: var(--text-color);
+    user-select: none;
+    /* Metni seçilemez yap */
+    pointer-events: none;
+    /* Metnin üzerine tıklama ve imleç olaylarını engelle */
 }
 
 #leftkatagoricontfoto {
@@ -137,6 +142,7 @@ a {
     background-color: rgb(239, 242, 246);
     border-radius: 5px;
     transition: background-color 1.2s;
+    box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #filtre:hover {
@@ -703,4 +709,90 @@ textarea {
 #musicControls input {
     background-color: darkcyan;
     padding: 10px;
+}
+
+/* Büyük Ekranlar (1600px ve üzeri) */
+@media (min-width: 1600px) {
+
+    /* 1600x900 çözünürlüğe özel düzenlemeler */
+    #left {
+        margin-left: 25%;
+        /* Sol kenar boşluğunu artır */
+    }
+
+    #center {
+        margin-right: 27%;
+        /* Sağ kenar boşluğunu artır */
+    }
+
+    /* Gerekirse diğer elemanlar için de düzenlemeler yapabilirsiniz */
+}
+
+/* Orta Büyüklükteki Ekranlar (Tabletler, vb.) */
+@media (max-width: 1200px) {
+    #left {
+        width: 15%;
+        /* Sol bölümün genişliğini azalt */
+        margin-left: 18%;
+        /* Sol kenar boşluğunu azalt */
+    }
+
+    #center {
+        width: 60%;
+        /* Orta bölümün genişliğini artır */
+        margin-right: 18%;
+        /* Sağ kenar boşluğunu azalt */
+    }
+
+    #spotifybaslik {
+        margin-top: 22%;
+    }
+
+    #spotifyblok {
+        margin-top: 28%;
+    }
+}
+
+/* Küçük Ekranlar (Akıllı Telefonlar) */
+@media (max-width: 768px) {
+
+    #left,
+    #center {
+        float: none;
+        /* Yan yana yerine alt alta */
+        width: 100%;
+        /* Tam genişliğe yay */
+        margin: 10px 0;
+        /* Üst ve alt kenar boşlukları ekle */
+    }
+
+    #centercont {
+        margin-top: 0;
+        /* Üst kenar boşluğunu kaldır */
+    }
+
+    #mesajlasmaAlani {
+        width: 90%;
+        /* Mesajlaşma alanını daralt */
+        right: 5%;
+        /* Sağa yasla */
+    }
+
+    #spotifybaslik,
+    #spotifyblok {
+        display: none;
+    }
+}
+
+/* Çok Küçük Ekranlar (Bazı Eski Telefonlar) */
+@media (max-width: 480px) {
+    /* Gerekirse daha küçük ekranlara özel düzenlemeler */
+
+    #centerlike {
+        width: 40%;
+    }
+
+    #mesajlasmaAlani {
+        height: 400px;
+    }
 }
