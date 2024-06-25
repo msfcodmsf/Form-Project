@@ -1,3 +1,6 @@
+@media (max-width: 1920px) {
+
+
 /* General styles */
 
 html,
@@ -709,6 +712,8 @@ textarea {
 #musicControls input {
     background-color: darkcyan;
     padding: 10px;
+}
+
 }
 
 /* Büyük Ekranlar (1600px ve üzeri) */
