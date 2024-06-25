@@ -1,3 +1,4 @@
+@media (max-width: 1920px) {
 /**BAR**/
 #logo {
     float: left;
@@ -99,6 +100,10 @@
 a {
     text-decoration: none;
 }
+
+}
+
+
 @media (max-width: 768px) {
     #düzenbar {
         width: 90%;
@@ -114,6 +119,8 @@ a {
         width: 50%;
     }
 }
+
+
 
 @media (max-width: 1600px) {
     #düzenbar {
