@@ -1,8 +1,4 @@
-@media (max-width: 1920px) {
-
-
 /* General styles */
-
 html,
 body {
     height: 100%;
@@ -44,6 +40,8 @@ body {
     /* Thumb üzerine gelindiğindeki renk */
 }
 
+
+@media (max-width: 1920px) {
 a {
     text-decoration: none;
     color: #000000;
@@ -87,7 +85,7 @@ a {
     width: 10%;
     height: 100%;
     float: left;
-    margin-left: 21%;
+    margin-left: 25%;
     margin-top: 2%;
     position: fixed;
 }
@@ -721,20 +719,46 @@ textarea {
 
     /* 1600x900 çözünürlüğe özel düzenlemeler */
     #left {
-        margin-left: 25%;
+        margin-left: 20%;
         /* Sol kenar boşluğunu artır */
     }
 
     #center {
-        margin-right: 27%;
+        margin-right: 24%;
         /* Sağ kenar boşluğunu artır */
     }
 
-    /* Gerekirse diğer elemanlar için de düzenlemeler yapabilirsiniz */
+    #centerolustur {
+      font-size: 14px;
+    }
+
+    #filtre {
+        font-size: 13px;
+    }
+
+    #centerprofilcont {
+        font-size: 12px;
+    }
+
+    #centersorubaslik {
+        font-size: 14px;
+    }
+
+    #centersorukatagori {
+        font-size: 14px;
+    }
+
+    #leftkatagoricont {
+        font-size: 13px;
+    }
+
+    #logo {
+        width: 15%; height: 100%;
+    }
 }
 
 /* Orta Büyüklükteki Ekranlar (Tabletler, vb.) */
-@media (max-width: 1200px) {
+@media (max-width: 1500px) {
     #left {
         width: 15%;
         /* Sol bölümün genişliğini azalt */
