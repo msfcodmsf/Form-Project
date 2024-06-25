@@ -19,6 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 )
 
@@ -31,6 +32,8 @@ var (
 type Config struct {
 	GoogleClientID     string `json:"google_client_id"`
 	GoogleClientSecret string `json:"google_client_secret"`
+	GitHubClientID     string `json:"github_client_id"`
+	GitHubClientSecret string `json:"github_client_secret"`
 }
 
 func loadConfig() {
@@ -48,6 +51,7 @@ func loadConfig() {
 }
 
 var googleOauthConfig *oauth2.Config
+var githubOauthConfig *oauth2.Config
 
 func init() {
 	loadConfig()
@@ -61,6 +65,14 @@ func init() {
 		},
 		Endpoint: google.Endpoint,
 	}
+	githubOauthConfig = &oauth2.Config{
+		RedirectURL:  "http://localhost:8065/github/callback",
+		ClientID:     config.GitHubClientID,
+		ClientSecret: config.GitHubClientSecret,
+		Scopes:       []string{"user:email"},
+		Endpoint:     github.Endpoint,
+	}
+	validate = validator.New()
 }
 
 type User struct {
@@ -133,8 +145,8 @@ func main() {
 	http.HandleFunc("/google/login", handleGoogleLogin)
 	http.HandleFunc("/google/callback", handleGoogleCallback)
 
-	// http.HandleFunc("/github/login", handleGitHubLogin)
-	// http.HandleFunc("/github/callback", handleGitHubCallback)
+	http.HandleFunc("/github/login", handleGitHubLogin)
+	http.HandleFunc("/github/callback", handleGitHubCallback)
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/register", registerHandler)
@@ -987,12 +999,6 @@ func getLikedPosts(userID int) ([]Post, error) {
 		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
 		posts = append(posts, post)
 	}
-
-	if len(posts) == 0 {
-		log.Println("Kullanıcının beğendiği post bulunamadı")
-	} else {
-		log.Printf("Kullanıcının beğendiği %d post bulundu\n", len(posts))
-	}
 	return posts, nil
 }
 
@@ -1089,6 +1095,92 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 		posts = append(posts, post)
 	}
 	return posts, nil
+}
+
+func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
+	url := githubOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	token, err := githubOauthConfig.Exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+		return
+	}
+
+	email, name, err := getEmailAndNameFromGitHub(token)
+	if err != nil {
+		http.Error(w, "Failed to get user info from GitHub", http.StatusInternalServerError)
+		return
+	}
+
+	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
+
+	userID, err := getOrCreateUser(email, username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	sessionToken, err := createSession(userID)
+	if err != nil {
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
+}
+
+func getEmailAndNameFromGitHub(token *oauth2.Token) (string, string, error) {
+	client := githubOauthConfig.Client(oauth2.NoContext, token)
+	resp, err := client.Get("https://api.github.com/user")
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	var userInfo struct {
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		return "", "", err
+	}
+
+	// GitHub email adresini ayrı bir endpoint'den almak gerekiyor.
+	if userInfo.Email == "" {
+		emailResp, err := client.Get("https://api.github.com/user/emails")
+		if err != nil {
+			return "", "", err
+		}
+		defer emailResp.Body.Close()
+
+		var emails []struct {
+			Email    string `json:"email"`
+			Primary  bool   `json:"primary"`
+			Verified bool   `json:"verified"`
+		}
+		if err := json.NewDecoder(emailResp.Body).Decode(&emails); err != nil {
+			return "", "", err
+		}
+		for _, e := range emails {
+			if e.Primary && e.Verified {
+				userInfo.Email = e.Email
+				break
+			}
+		}
+	}
+
+	return userInfo.Email, userInfo.Name, nil
 }
 
 func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {

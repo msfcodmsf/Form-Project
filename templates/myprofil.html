@@ -48,11 +48,14 @@
             <!-- Profil Bilgileri -->
             <div id="profileInfo">
                 <p><strong>Email:</strong> {{.User.Email}}</p>
-                <p><strong>Age:</strong> 21</p>
-                <p><strong>Participation:</strong> 29 Mayıs 2024</p>
-                <p><strong>Last Event:</strong> Just Now (Viewing member profile msf_snc)</p>
             </div>
         </div>
+    </div>
+    <!--delete kısmı -->
+    <div id="deleteAccountContainer">
+        <form id="deleteUserForm" action="/deleteUser" method="post">
+            <button type="submit" id="deleteAccountButton">Hesabı Sil</button>
+        </form>
     </div>
     <!-- Profil İstatistikleri -->
     <div id="postsContainer">

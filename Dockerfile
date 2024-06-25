@@ -25,8 +25,8 @@ COPY --from=build /app/main .
 COPY --from=build /app/templates ./templates
 COPY --from=build /app/forum.db .
 
-# Expose port 8080 to the outside world
-EXPOSE 8080
+# Expose port 8065 to the outside world
+EXPOSE 8065
 
 # Command to run the executable
 CMD ["./main"]
