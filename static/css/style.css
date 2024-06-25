@@ -108,9 +108,11 @@ a {
     width: 90%;
     padding-left: 10px;
     color: var(--text-color);
-    user-select: none; /* Metni seçilemez yap */
-    pointer-events: none; /* Metnin üzerine tıklama ve imleç olaylarını engelle */
-  }
+    user-select: none;
+    /* Metni seçilemez yap */
+    pointer-events: none;
+    /* Metnin üzerine tıklama ve imleç olaylarını engelle */
+}
 
 #leftkatagoricontfoto {
     height: 90%;
@@ -707,4 +709,90 @@ textarea {
 #musicControls input {
     background-color: darkcyan;
     padding: 10px;
+}
+
+/* Büyük Ekranlar (1600px ve üzeri) */
+@media (min-width: 1600px) {
+
+    /* 1600x900 çözünürlüğe özel düzenlemeler */
+    #left {
+        margin-left: 25%;
+        /* Sol kenar boşluğunu artır */
+    }
+
+    #center {
+        margin-right: 27%;
+        /* Sağ kenar boşluğunu artır */
+    }
+
+    /* Gerekirse diğer elemanlar için de düzenlemeler yapabilirsiniz */
+}
+
+/* Orta Büyüklükteki Ekranlar (Tabletler, vb.) */
+@media (max-width: 1200px) {
+    #left {
+        width: 15%;
+        /* Sol bölümün genişliğini azalt */
+        margin-left: 18%;
+        /* Sol kenar boşluğunu azalt */
+    }
+
+    #center {
+        width: 60%;
+        /* Orta bölümün genişliğini artır */
+        margin-right: 18%;
+        /* Sağ kenar boşluğunu azalt */
+    }
+
+    #spotifybaslik {
+        margin-top: 22%;
+    }
+
+    #spotifyblok {
+        margin-top: 28%;
+    }
+}
+
+/* Küçük Ekranlar (Akıllı Telefonlar) */
+@media (max-width: 768px) {
+
+    #left,
+    #center {
+        float: none;
+        /* Yan yana yerine alt alta */
+        width: 100%;
+        /* Tam genişliğe yay */
+        margin: 10px 0;
+        /* Üst ve alt kenar boşlukları ekle */
+    }
+
+    #centercont {
+        margin-top: 0;
+        /* Üst kenar boşluğunu kaldır */
+    }
+
+    #mesajlasmaAlani {
+        width: 90%;
+        /* Mesajlaşma alanını daralt */
+        right: 5%;
+        /* Sağa yasla */
+    }
+
+    #spotifybaslik,
+    #spotifyblok {
+        display: none;
+    }
+}
+
+/* Çok Küçük Ekranlar (Bazı Eski Telefonlar) */
+@media (max-width: 480px) {
+    /* Gerekirse daha küçük ekranlara özel düzenlemeler */
+
+    #centerlike {
+        width: 40%;
+    }
+
+    #mesajlasmaAlani {
+        height: 400px;
+    }
 }
