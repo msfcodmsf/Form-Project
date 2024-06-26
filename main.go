@@ -72,7 +72,6 @@ func init() {
 		Scopes:       []string{"user:email"},
 		Endpoint:     github.Endpoint,
 	}
-	validate = validator.New()
 }
 
 type User struct {
@@ -160,7 +159,6 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 	http.HandleFunc("/myprofil", myProfileHandler)
-	http.HandleFunc("/deleteUser", deleteUserHandler)
 
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
@@ -185,16 +183,26 @@ func createTables() {
             title TEXT,
             content TEXT,
             categories TEXT,
-            created_at TIMESTAMP,
-			deleted INTEGER DEFAULT 0
+            created_at TIMESTAMP
         );`,
 		`CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             post_id INTEGER,
             user_id INTEGER,
             content TEXT,
-            created_at TIMESTAMP,
-			deleted INTEGER DEFAULT 0
+            created_at TIMESTAMP
+        );`,
+		`CREATE TABLE IF NOT EXISTS likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            post_id INTEGER,
+            comment_id INTEGER
+        );`,
+		`CREATE TABLE IF NOT EXISTS dislikes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            post_id INTEGER,
+            comment_id INTEGER
         );`,
 		`CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
@@ -405,13 +413,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		var hashedPassword string
 		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &hashedPassword)
 		if err != nil {
-			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
+			handleErr(w, err, "Invalid email", http.StatusUnauthorized)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 		if err != nil {
-			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
+			handleErr(w, err, "Invalid password", http.StatusUnauthorized)
 			return
 		}
 
@@ -420,7 +428,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, err = db.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
 		if err != nil {
-			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			handleErr(w, err, "Session creation failed", http.StatusInternalServerError)
 			return
 		}
 
@@ -628,63 +636,6 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
 }
 
-func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	session, err := getSession(r)
-	if err != nil {
-		handleErr(w, err, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if session == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	userID := session.UserID
-
-	// Kullanıcıya ait postların ve yorumların kullanıcı adını anonim olarak güncelle
-	_, err = db.Exec(`UPDATE posts SET username = 'Anonim Kullanıcı' WHERE user_id = ?`, userID)
-	if err != nil {
-		handleErr(w, err, "Error updating posts", http.StatusInternalServerError)
-		return
-	}
-
-	_, err = db.Exec(`UPDATE comments SET username = 'Anonim Kullanıcı' WHERE user_id = ?`, userID)
-	if err != nil {
-		handleErr(w, err, "Error updating comments", http.StatusInternalServerError)
-		return
-	}
-
-	// Kullanıcıyı veritabanından sil
-	_, err = db.Exec(`DELETE FROM users WHERE id = ?`, userID)
-	if err != nil {
-		handleErr(w, err, "Error deleting user", http.StatusInternalServerError)
-		return
-	}
-
-	// Kullanıcının oturumlarını sil
-	_, err = db.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID)
-	if err != nil {
-		handleErr(w, err, "Error deleting user sessions", http.StatusInternalServerError)
-		return
-	}
-
-	// Oturum çerezini temizle
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    "",
-		Expires:  time.Now().Add(-1 * time.Hour),
-		HttpOnly: true,
-	})
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
 func voteHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := getSession(r)
 	if err != nil || session == nil {
@@ -890,13 +841,13 @@ func myProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Kullanıcının kendi gönderilerini ve beğendiği gönderileri alın
+	// Kullanıcının kendi gönderilerini alın
 	ownPosts, err := getOwnPosts(session.UserID)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
+	// Kullanıcının beğendiği gönderileri alın
 	likedPosts, err := getLikedPosts(session.UserID)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
