@@ -48,11 +48,14 @@
             <!-- Profil Bilgileri -->
             <div id="profileInfo">
                 <p><strong>Email:</strong> {{.User.Email}}</p>
-                <p><strong>Age:</strong> 21</p>
-                <p><strong>Participation:</strong> 29 Mayıs 2024</p>
-                <p><strong>Last Event:</strong> Just Now (Viewing member profile msf_snc)</p>
             </div>
         </div>
+    </div>
+    <!--delete kısmı -->
+    <div id="deleteAccountContainer">
+        <form id="deleteUserForm" action="/deleteUser" method="post">
+            <button type="submit" id="deleteAccountButton">Hesabı Sil</button>
+        </form>
     </div>
     <!-- Profil İstatistikleri -->
     <div id="postsContainer">
@@ -64,18 +67,33 @@
         <div id="ownPosts" class="tab-content active">
             {{range .OwnPosts}}
             <div id="centercont">
-                {{.Title}} - {{.Content}}
+                <li>{{.Title}} - {{.Content}}</li>
+                <br><br>
+                {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes {{.CommentCount}} Comments
+                <form id="deletePostForm" action="/deletePost" method="post">
+                    <input type="hidden" name="post_id" value="{{.ID}}">
+                    <button type="submit">
+                        <img src="/static/png/delete.png" alt="Delete">
+                    </button>
+                </form>
             </div>
             {{else}}
             <p>Henüz hiçbir post oluşturmadınız.</p>
             {{end}}
-
-
         </div>
+
         <div id="likedPosts" class="tab-content">
             {{range .LikedPosts}}
             <div id="centercont">
-                {{.Title}} - {{.Content}}
+                <li> {{.Title}} - {{.Content}}</li>
+                <br><br>
+                {{.CreatedAtFormatted}} &nbsp; {{.LikeCount}} Likes {{.DislikeCount}} Dislikes {{.CommentCount}} Comments
+                <form id="deletePostForm" action="/deletePost" method="post">
+                    <input type="hidden" name="post_id" value="{{.ID}}">
+                    <button type="submit">
+                        <img src="/static/png/delete.png" alt="Delete">
+                    </button>
+                </form>
             </div>
             {{else}}
             <p>Henüz hiçbir gönderiyi beğenmediniz.</p>
@@ -122,12 +140,12 @@
                         content.classList.add('active');
                         console.log(tabId +
                             " içeriği gösteriliyor."
-                            ); // Tıklanan sekmenin ID'sini konsola yazdırın
+                        ); // Tıklanan sekmenin ID'sini konsola yazdırın
                     } else {
                         content.classList.remove('active');
                         console.log(content.id +
                             " içeriği gizleniyor."
-                            ); // Tıklanan sekmenin ID'sini konsola yazdırın
+                        ); // Tıklanan sekmenin ID'sini konsola yazdırın
                     }
                 });
             });

@@ -19,6 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 )
 
@@ -31,6 +32,8 @@ var (
 type Config struct {
 	GoogleClientID     string `json:"google_client_id"`
 	GoogleClientSecret string `json:"google_client_secret"`
+	GitHubClientID     string `json:"github_client_id"`
+	GitHubClientSecret string `json:"github_client_secret"`
 }
 
 func loadConfig() {
@@ -48,6 +51,7 @@ func loadConfig() {
 }
 
 var googleOauthConfig *oauth2.Config
+var githubOauthConfig *oauth2.Config
 
 func init() {
 	loadConfig()
@@ -60,6 +64,13 @@ func init() {
 			"https://www.googleapis.com/auth/userinfo.profile",
 		},
 		Endpoint: google.Endpoint,
+	}
+	githubOauthConfig = &oauth2.Config{
+		RedirectURL:  "http://localhost:8065/github/callback",
+		ClientID:     config.GitHubClientID,
+		ClientSecret: config.GitHubClientSecret,
+		Scopes:       []string{"user:email"},
+		Endpoint:     github.Endpoint,
 	}
 }
 
@@ -133,8 +144,8 @@ func main() {
 	http.HandleFunc("/google/login", handleGoogleLogin)
 	http.HandleFunc("/google/callback", handleGoogleCallback)
 
-	// http.HandleFunc("/github/login", handleGitHubLogin)
-	// http.HandleFunc("/github/callback", handleGitHubCallback)
+	http.HandleFunc("/github/login", handleGitHubLogin)
+	http.HandleFunc("/github/callback", handleGitHubCallback)
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/register", registerHandler)
@@ -148,6 +159,7 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/viewPost", viewPostHandler)
 	http.HandleFunc("/myprofil", myProfileHandler)
+
 	log.Println("Server started at :8065")
 	http.ListenAndServe(":8065", nil)
 }
@@ -401,13 +413,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		var hashedPassword string
 		err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &hashedPassword)
 		if err != nil {
-			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
+			handleErr(w, err, "Invalid email", http.StatusUnauthorized)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 		if err != nil {
-			handleErr(w, err, "Invalid email or password", http.StatusUnauthorized)
+			handleErr(w, err, "Invalid password", http.StatusUnauthorized)
 			return
 		}
 
@@ -416,7 +428,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, err = db.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
 		if err != nil {
-			handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			handleErr(w, err, "Session creation failed", http.StatusInternalServerError)
 			return
 		}
 
@@ -829,18 +841,18 @@ func myProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Kullanıcının kendi gönderilerini ve beğendiği gönderileri alın
-	ownPosts, err := getFilteredPosts("", "", "", &session.UserID)
+	// Kullanıcının kendi gönderilerini alın
+	ownPosts, err := getOwnPosts(session.UserID)
 	if err != nil {
 		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
-    likedPosts, err := getLikedPosts(session.UserID) 
-    if err != nil {
-        handleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	// Kullanıcının beğendiği gönderileri alın
+	likedPosts, err := getLikedPosts(session.UserID)
+	if err != nil {
+		handleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	// HTML şablonunu parse etme
 	tmpl, err := template.ParseFiles("templates/myprofil.html")
@@ -867,11 +879,88 @@ func myProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getOwnPosts(userID int) ([]Post, error) {
+	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+                     COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
+                     (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
+              FROM posts
+              JOIN users ON posts.user_id = users.id
+              LEFT JOIN votes ON votes.post_id = posts.id
+              WHERE posts.user_id = ? AND posts.deleted = 0
+              GROUP BY posts.id
+              ORDER BY posts.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func getLikedPosts(userID int) ([]Post, error) {
+	query := `
+		SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
+		       COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+		       COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
+		       (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted = 0) AS comment_count
+		FROM posts
+		JOIN users ON posts.user_id = users.id
+		LEFT JOIN votes ON votes.post_id = posts.id
+		WHERE posts.id IN (SELECT post_id FROM votes WHERE user_id = ? AND vote_type = 1)
+		AND posts.deleted = 0
+		GROUP BY posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username
+		ORDER BY posts.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var categoriesJSON string
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
 func getUserByID(userID int) (*User, error) {
 	var user User
 	query := "SELECT id, email, username, password FROM users WHERE id = ?"
 	err := db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user with ID %d not found", userID)
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -957,6 +1046,92 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 		posts = append(posts, post)
 	}
 	return posts, nil
+}
+
+func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
+	url := githubOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	token, err := githubOauthConfig.Exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+		return
+	}
+
+	email, name, err := getEmailAndNameFromGitHub(token)
+	if err != nil {
+		http.Error(w, "Failed to get user info from GitHub", http.StatusInternalServerError)
+		return
+	}
+
+	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
+
+	userID, err := getOrCreateUser(email, username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	sessionToken, err := createSession(userID)
+	if err != nil {
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
+}
+
+func getEmailAndNameFromGitHub(token *oauth2.Token) (string, string, error) {
+	client := githubOauthConfig.Client(oauth2.NoContext, token)
+	resp, err := client.Get("https://api.github.com/user")
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	var userInfo struct {
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		return "", "", err
+	}
+
+	// GitHub email adresini ayrı bir endpoint'den almak gerekiyor.
+	if userInfo.Email == "" {
+		emailResp, err := client.Get("https://api.github.com/user/emails")
+		if err != nil {
+			return "", "", err
+		}
+		defer emailResp.Body.Close()
+
+		var emails []struct {
+			Email    string `json:"email"`
+			Primary  bool   `json:"primary"`
+			Verified bool   `json:"verified"`
+		}
+		if err := json.NewDecoder(emailResp.Body).Decode(&emails); err != nil {
+			return "", "", err
+		}
+		for _, e := range emails {
+			if e.Primary && e.Verified {
+				userInfo.Email = e.Email
+				break
+			}
+		}
+	}
+
+	return userInfo.Email, userInfo.Name, nil
 }
 
 func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
@@ -1087,7 +1262,7 @@ func getSession(r *http.Request) (*Session, error) {
 	}
 
 	// Oturum süresini her kontrol ettiğimizde uzatalım
-	newExpiry := time.Now().Add(1 * time.Minute)
+	newExpiry := time.Now().Add(10 * time.Minute)
 	_, err = db.Exec("UPDATE sessions SET expiry = ? WHERE id = ?", newExpiry, sessionToken)
 	if err != nil {
 		return nil, err
@@ -1096,28 +1271,3 @@ func getSession(r *http.Request) (*Session, error) {
 
 	return &session, nil
 }
-
-
-func getLikedPosts(userID int) ([]Post, error) {
-    rows, err := db.Query(`SELECT posts.* FROM posts JOIN likes ON posts.id = likes.post_id WHERE likes.user_id = ?`, userID)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
-
-    var posts []Post
-    for rows.Next() {
-        var post Post
-        var categoriesJSON string
-        if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt); err != nil {
-            return nil, err
-        }
-        if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
-            return nil, err
-        }
-        post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
-        posts = append(posts, post)
-    }
-    return posts, rows.Err()
-}
-
