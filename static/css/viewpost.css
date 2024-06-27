@@ -294,7 +294,7 @@ body.night-mode {
 }
 
 #darkmod {
-  width: 3%;
+  width: 3%;  
   height: 70%;
   margin-left: 5%;
   margin-top: 1%;
@@ -311,7 +311,6 @@ img {
   margin-right: 10px;
 }
 
-input,
 select,
 textarea {
   width: 100%;

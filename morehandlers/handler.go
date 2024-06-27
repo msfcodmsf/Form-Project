@@ -1,83 +1,87 @@
-package morehandlers
+package morehandlers // Kullanıcı profili ve ilgili işlemleri yöneten paket
 
 import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"form-project/datahandlers"
-	"form-project/utils"
-	"html/template"
-	"net/http"
-	"strings"
-	"time"
+    "database/sql"    // Veritabanı işlemleri için
+    "encoding/json"   // JSON verilerini işlemek için
+    "fmt"             // Formatlama ve çıktı işlemleri için
+    "form-project/datahandlers" // Veritabanı bağlantısı ve oturum yönetimi için
+    "form-project/utils"        // Hata yönetimi gibi yardımcı fonksiyonlar için
+    "html/template"  // HTML şablonlarını işlemek için
+    "net/http"       // HTTP isteklerini ve yanıtlarını yönetmek için
+    "strings"         // String (metin) işlemleri için
+    "time"           // Zaman ve tarih işlemleri için
 )
 
+// Post yapısı, bir gönderinin verilerini temsil eder.
 type Post struct {
-	ID                  int
-	UserID              int
-	Title               string
-	Content             string
-	Categories          []string // JSON olarak kaydedilecek ve geri okunacak
-	CategoriesFormatted string   // Virgülle ayrılmış kategoriler
-	CreatedAt           time.Time
-	CreatedAtFormatted  string
-	LikeCount           int
-	DislikeCount        int
-	Username            string
-	CommentCount        int
+    ID                int       // Gönderi ID'si
+    UserID            int       // Gönderi sahibi kullanıcı ID'si
+    Title             string    // Gönderi başlığı
+    Content           string    // Gönderi içeriği
+    Categories        []string  // Gönderi kategorileri (JSON olarak saklanır)
+    CategoriesFormatted string // Gönderi kategorileri (virgülle ayrılmış, görüntüleme amaçlı)
+    CreatedAt         time.Time // Gönderi oluşturulma tarihi
+    CreatedAtFormatted string   // Gönderi oluşturulma tarihi (formatlı)
+    LikeCount         int       // Gönderi beğeni sayısı
+    DislikeCount      int       // Gönderi beğenmeme sayısı
+    Username          string    // Gönderi sahibi kullanıcı adı
+    CommentCount      int       // Gönderiye yapılan yorum sayısı
 }
+
+// User yapısı, bir kullanıcıyı temsil eder.
 type User struct {
-	ID       int            `validate:"-"`
-	Email    string         `validate:"required,email"`
-	Username sql.NullString // Google kayıtta bazen boş olabilir
-	Password sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
+    ID       int            `validate:"-"`             // Kullanıcı ID'si (doğrulamada yoksayılır)
+    Email    string         `validate:"required,email"` // Kullanıcı e-posta adresi (zorunlu ve e-posta formatında olmalı)
+    Username sql.NullString                             // Kullanıcı adı (Google girişi için boş olabilir)
+    Password sql.NullString                             // Şifre (Google girişi için boş olabilir)
 }
 
 func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
+	// Oturum kontrolü: Kullanıcı giriş yapmış mı?
 	session, err := datahandlers.GetSession(r)
-	if err != nil || session == nil { // Oturum kontrolü
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther) // Giriş yapmamışsa, giriş sayfasına yönlendir
 		return
 	}
 
 	// Kullanıcı bilgilerini veritabanından çekme
 	user, err := getUserByID(session.UserID)
 	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError) // Hata yönetimi
 		return
 	}
 
-	// Kullanıcının kendi gönderilerini alın
+	// Kullanıcının kendi gönderilerini ve beğendiği gönderileri alma
 	ownPosts, err := getOwnPosts(session.UserID)
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	// Kullanıcının beğendiği gönderileri alın
 	likedPosts, err := getLikedPosts(session.UserID)
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// HTML şablonunu parse etme
+	// HTML şablonunu ayrıştırma (parse)
 	tmpl, err := template.ParseFiles("templates/myprofil.html")
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
+	// Şablona geçirilecek verileri hazırlama
 	data := struct {
-		User       *User
-		OwnPosts   []Post
-		LikedPosts []Post
+		User       *User  // Kullanıcı bilgileri
+		OwnPosts   []Post // Kullanıcının kendi gönderileri
+		LikedPosts []Post // Kullanıcının beğendiği gönderiler
 	}{
 		User:       user,
 		OwnPosts:   ownPosts,
 		LikedPosts: likedPosts,
 	}
 
-	// Kullanıcı bilgilerini HTML şablonuna geçirme
+	// Şablonu çalıştırıp HTML çıktısını oluşturma
 	err = tmpl.Execute(w, data)
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)

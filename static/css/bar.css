@@ -4,7 +4,9 @@
     #logo {
         float: left;
         margin-right: 50px;
+        margin-top: -10px;
         width: 15%; height: 100%;
+        padding: 1%;
     }
 
     #bigbar {
@@ -186,4 +188,17 @@
         margin-left: 0;
         text-align: center;
     }
+}
+
+
+body.night-mode #searchBox {
+    background-color: rgb(20, 25, 31);
+    color: white;
+    border: 1px groove white;
+}
+
+body.light-mode #searchBox {
+    background-color: rgb(168, 172, 178);
+    color: black;
+    border: 1px groove black;
 }

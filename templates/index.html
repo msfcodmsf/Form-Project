@@ -16,17 +16,15 @@
         <div id="düzenbar">
             <div id="bar">
                 <!-- Logo -->
-                <a href="index.html" id="logo"
-                    style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain; "></a>
-
-                <input type="text" id="searchBox" placeholder="Search Now" onkeyup="searchPosts()">
+                <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain;"></a>               
+                <input type="text" id="searchBox" placeholder="search now" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
                     <span class="theme-mode">
                         <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
                             <i id="themeIcon" class="fas fa-sun"></i></a>
                     </span>
-                </div>
+                </div>  
                 <div id="girişbar">
                     <nav>
                         <!-- Giriş durumuna göre menü -->
@@ -212,6 +210,21 @@
         </div>
     </div>
 
+    <!-- Hata mesajı için stil -->
+    <style>
+        #errorPopup {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: red;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
 
     <!-- Harici script dosyaları -->
     <script src="/static/scripts.js"></script>
@@ -232,7 +245,6 @@
             document.body.classList.add(tema + "-mode"); // Yeni tema sınıfını ekle
         });
     </script>
-
 
     <!-- Arama script'i -->
     <script>
@@ -279,7 +291,16 @@
     window.onload = function() {
         const deleteErrorCookie = getCookie("delete_error");
         if (deleteErrorCookie) {
-            alert(deleteErrorCookie);
+            const errorPopup = document.createElement('div');
+            errorPopup.id = "errorPopup";
+            errorPopup.textContent = deleteErrorCookie;
+
+            document.body.appendChild(errorPopup);
+
+            setTimeout(() => {
+                errorPopup.remove();
+            }, 3000);
+
             // Clear the cookie after displaying the alert
             document.cookie = "delete_error=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         }
