@@ -35,12 +35,47 @@ body.night-mode #profileContainer {
     /* Gece modu metin rengi */
 }
 
+@media (max-width: 1920px) {
+    #likedPosts {
+        overflow-y: auto;
+        /* or overflow: auto; */
+        max-height: 500px;
+        /* Optional: Set a maximum height */
+    }
+    
+    #ownPosts {
+        overflow-y: auto;
+        /* or overflow: auto; */
+        max-height: 500px;
+        /* Optional: Set a maximum height */
+    }
+}
+
+
+@media (max-width: 1600px) {
+    #likedPosts {
+        overflow-y: auto;
+        /* or overflow: auto; */
+        max-height: 380px;
+        /* Optional: Set a maximum height */
+    }
+    
+    #ownPosts {
+        overflow-y: auto;
+        /* or overflow: auto; */
+        max-height: 380px;
+        /* Optional: Set a maximum height */
+    }
+}
+
+
+
 #profileContainer {
     display: flex;
     align-items: flex-start;
     margin: 20px;
     background-color: white;
-    padding: 130px;
+    padding: 60px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     width: 40%;
@@ -137,12 +172,7 @@ body.night-mode #profileContainer {
     margin-right: 20px;
 }
 
-#likedPosts {
-    overflow-y: auto;
-    /* or overflow: auto; */
-    max-height: 300px;
-    /* Optional: Set a maximum height */
-}
+
 
 /* Geri Dön Butonu */
 #backButton {
@@ -253,7 +283,7 @@ body.night-mode #profileContainer {
 }
 
 #centercont {
-    width: 80%;
+    width: 85%;
     padding: 25px;
     margin-top: 2%;
     border-radius: 10px 10px 10px 10px;
@@ -286,4 +316,22 @@ body.night-mode #profileContainer {
 #deletePostForm img {
     width: 20px;
     height: 20px;
+}
+
+
+
+
+@media (max-width: 1600px) {
+    #profileContainer {
+        padding: 30px;
+    }
+
+    #centercont {
+        padding: 6px;
+    }
+
+    #likedPosts {
+        min-width: 500px;
+    }
+
 }

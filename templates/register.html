@@ -9,30 +9,18 @@
 </head>
 
 <body>
-    <script src="/static/scripts.js"></script>
-
-    <script>
-        // Sayfa yüklendiğinde temayı ayarla
-        window.onload = function () {
-            let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
-            document.body.classList.add(tema + "-mode"); // Mevcut temaya uygun sınıfı ekle
-        };
-
-        // Tema değiştirme düğmesini dinle
-        document.getElementById('themeToggle').addEventListener('click', function () {
-            const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
-            changeTheme(currentTheme);
-        });
-
-        // Kayıt penceresini kapatma işlevi
-        function closeRegister() {
-            window.location.href = 'index.html';
-        }
-    </script>
+        <script src="/static/scripts.js"></script>
 
     <div class="register-container" id="register-container">
+        <span class="theme-mode"> 
+            <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
+                <i id="themeIcon" class="fas fa-sun"></i>
+            </a>
+        </span>
+
         <button class="close-btn" onclick="closeRegister()">×</button>
         <h1>Register</h1>
+               
         <form method="post" action="/register">
             <!-- Email alanı -->
             <label for="email">Email</label>
@@ -70,17 +58,40 @@
             <button type="submit">Register</button>
         </form>
 
-        <!-- Google ile giriş düğmesi -->
-        <a href="/google/login"><button class="google-btn"><img src="/static/png/google.png" width="10%"
-                    height="10%"></button></a>
+        <div id="buttongiriscont">
+            <div id="buttongirisgoogle">
+                <a href="/google/login"><button class="google-btn"><img src="/static/png/google.png" width="50%"
+                            height="20%"></button></a>
+            </div>
+            <div id="buttongirisgithub">
+                <a href="/github/login"><button class="github-btn"><img src="/static/png/github.png" width="50%"
+                            height="20%"></button></a>
+            </div>
 
-        <!-- GitHub ile giriş düğmesi -->
-        <a href="/github/login"><button class="github-btn"><img src="/static/png/github.png" width="10%" height="10%"></button></a>
-        
-        <!-- Tema değiştirme düğmesi -->
-        <button id="themeToggle">Toggle Theme</button>
+        </div>
 
         <p class="mavi-yazi"><a href="/login">Do you have a subscription?</a></p>
+
+
+
+        <script>
+            // Sayfa yüklendiğinde temayı ayarla
+            window.onload = function () {
+                let tema = localStorage.getItem("tema") || "light"; // Varsayılan tema
+                document.body.classList.add(tema + "-mode"); // Mevcut temaya uygun sınıfı ekle
+            };
+    
+            // Tema değiştirme düğmesini dinle
+            document.getElementById('themeToggle').addEventListener('click', function () {
+                const currentTheme = document.body.classList.contains('light-mode') ? 'night-mode' : 'light-mode';
+                changeTheme(currentTheme);
+            });
+    
+            // Kayıt penceresini kapatma işlevi
+            function closeRegister() {
+                window.location.href = 'index.html';
+            }
+        </script>
     </div>
 </body>
 

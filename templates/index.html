@@ -274,6 +274,25 @@
         }
     </script>
 
+<script>
+    // JavaScript to check for the error cookie and display the alert
+    window.onload = function() {
+        const deleteErrorCookie = getCookie("delete_error");
+        if (deleteErrorCookie) {
+            alert(deleteErrorCookie);
+            // Clear the cookie after displaying the alert
+            document.cookie = "delete_error=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+    }
+
+    // Helper function to get a cookie by name
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+</script>
+
 </body>
 
 </html>

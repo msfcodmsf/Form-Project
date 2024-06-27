@@ -132,7 +132,6 @@ body {
   /* Mutlaka bu özelliği ekleyin */
   padding-left: 2px;
   /* Çizgiyi içeriğin başlangıcından itibaren ayarlayın */
-  box-shadow: 7px 7px 7px rgb(17, 40, 62);
 }
 
 #centercont::before {
@@ -141,10 +140,10 @@ body {
   /* Çizgi kalınlığı */
   height: 100%;
   /* Öğenin yüksekliği kadar */
-  background-color: rgb(22, 59, 97);
+  background-color: #000;
   /* Çizgi rengi */
   position: absolute;
-  left: 17%;
+  left: 18%;
   /* İstediğiniz yere göre ayarlayın */
   top: 0;
 }
@@ -242,18 +241,6 @@ body {
 
 }
 
-.styled-textarea {
-  font-weight: bold;
-  /* Kalın yazı */
-  font-style: italic;
-  /* İtalik yazı */
-  font-family: Arial, sans-serif;
-  /* İtalyan yazı */
-  /* Buraya istediğiniz diğer stil özelliklerini ekleyebilirsiniz */
-}
-
-
-
 
 /**Night Mode**/
 body.night-mode #centerprofilcont,
@@ -335,4 +322,14 @@ textarea {
 
 textarea {
   resize: none;
+}
+
+
+
+@media (max-width: 1920px) {
+
+  #centerprofilcont {
+    font-size: 14px;
+    width: 18%;
+  }
 }
