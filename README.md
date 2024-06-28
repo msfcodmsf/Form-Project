@@ -1,4 +1,4 @@
-# Forum-Project
+# Form-Project
 * Bu proje, Go programlama dili kullanılarak geliştirilmiş basit bir forum uygulamasıdır. Kullanıcılar gönderi paylaşabilir, yorum yapabilir, gönderi ve yorumları beğenebilir/beğenmeyebilirler. Ayrıca Google ve GitHub ile OAuth tabanlı oturum açma özelliği de bulunmaktadır.
 
 ## Özellikler
