@@ -16,6 +16,7 @@ type Session struct {
 	Expiry time.Time
 }
 
+// Veritabanına bağlantı açar.
 func SetDB() {
 	var err error
 	DB, err = sql.Open("sqlite3", "./database/forum.db")
@@ -24,6 +25,7 @@ func SetDB() {
 	}
 }
 
+// HTTP isteğinden (r) oturum çerezini alarak oturum bilgilerini döndürür.
 func GetSession(r *http.Request) (*Session, error) {
 	if DB == nil {
 		return nil, fmt.Errorf("database connection is not initialized")
@@ -66,6 +68,7 @@ func GetSession(r *http.Request) (*Session, error) {
 	return &session, nil
 }
 
+// Gerekli veritabanı tablolarını oluşturur.
 func CreateTables() {
 	SessionTables(DB)
 	PostTables(DB)
@@ -128,7 +131,8 @@ func UsersTables(db *sql.DB) {
 	}
 }
 
-func VoteTables(db *sql.DB) {
+// Like Ve Dislike tablolarını oluştur
+func VoteTables(db *sql.DB) { // Sayısını artırır
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS votes (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
