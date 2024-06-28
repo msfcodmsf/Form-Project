@@ -161,6 +161,7 @@ func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Belirli bir yorumu silmek için kullanılan HTTP işleyicisidir.
 func DeleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err != nil || session == nil {
@@ -202,6 +203,7 @@ func DeleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
 }
 
+// Gönderilere veya yorumlara oy vermek (beğenmek/beğenmemek) için kullanılır.
 func VoteHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err != nil || session == nil {
@@ -294,6 +296,7 @@ func VoteHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+//  Belirli bir gönderiyi ve altındaki yorumları görüntülemek için kullanılan HTTP işleyicisidir.
 func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := datahandlers.GetSession(r)
 

@@ -35,6 +35,7 @@ type User struct {
     Username sql.NullString                             // Kullanıcı adı (Google girişi için boş olabilir)
     Password sql.NullString                             // Şifre (Google girişi için boş olabilir)
 }
+
 //  kullanıcının profil sayfasını oluşturur ve görüntüler.
 func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Oturum kontrolü: Kullanıcı giriş yapmış mı?

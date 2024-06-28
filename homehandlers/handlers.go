@@ -56,7 +56,7 @@ var (
 )
 
 type Config struct {
-	GoogleClientID     string `json:"google_client_id"`
+	GoogleClientID     string `json:"google_client_id"` 
 	GoogleClientSecret string `json:"google_client_secret"`
 	GitHubClientID     string `json:"github_client_id"`
 	GitHubClientSecret string `json:"github_client_secret"`
@@ -79,6 +79,7 @@ func loadConfig() {
 var googleOauthConfig *oauth2.Config
 var githubOauthConfig *oauth2.Config
 
+// Paket yüklenirken otomatik olarak çalışır.
 func init() {
 	loadConfig()
 	googleOauthConfig = &oauth2.Config{
@@ -100,6 +101,7 @@ func init() {
 	}
 }
 
+// Ana sayfayı görüntüler.
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := datahandlers.GetSession(r)
 
@@ -133,6 +135,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+//  Verilen filtrelere (arama sorgusu, kategori, filtre türü, kullanıcı ID'si) göre gönderileri veritabanından çeker.
 func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -202,6 +206,7 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 	return posts, nil
 }
 
+// Kullanıcı kaydını işler.
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err == nil && session != nil {
@@ -327,6 +332,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//  Kayıt formunu göstermek için HTML şablonunu render eder.
 func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
 	tmpl, err := template.ParseFiles("templates/register.html")
 	if err != nil {
@@ -340,6 +346,7 @@ func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
 	}
 }
 
+// Kullanıcı oturum açma işlemini işler.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err == nil && session != nil {
@@ -398,6 +405,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Kullanıcının oturumunu kapatır.
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -424,6 +432,8 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+
 func HandleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	url := githubOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
