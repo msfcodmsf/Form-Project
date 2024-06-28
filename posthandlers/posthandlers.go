@@ -296,7 +296,7 @@ func VoteHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-//  Belirli bir gönderiyi ve altındaki yorumları görüntülemek için kullanılan HTTP işleyicisidir.
+// Belirli bir gönderiyi ve altındaki yorumları görüntülemek için kullanılan HTTP işleyicisidir.
 func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := datahandlers.GetSession(r)
 

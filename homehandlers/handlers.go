@@ -525,7 +525,7 @@ func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) { // Google tarafından kimlik doğrulamasından geçtiğini ve uygulamanıza yetki verdiğini gösterir.
 	code := r.URL.Query().Get("code")
 	token, err := googleOauthConfig.Exchange(r.Context(), code)
 	if err != nil {
@@ -564,7 +564,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
 
-func generateRandomString(length int) string {
+func generateRandomString(length int) string {  // Kullancı isimlerinin sonuna random karakterler atarak diğer kullanıcılarla aynı isimde olmamasını sağlıyor.
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
 	for i := range b {
