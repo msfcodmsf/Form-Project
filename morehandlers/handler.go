@@ -35,7 +35,7 @@ type User struct {
     Username sql.NullString                             // Kullanıcı adı (Google girişi için boş olabilir)
     Password sql.NullString                             // Şifre (Google girişi için boş olabilir)
 }
-
+//  kullanıcının profil sayfasını oluşturur ve görüntüler.
 func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Oturum kontrolü: Kullanıcı giriş yapmış mı?
 	session, err := datahandlers.GetSession(r)
@@ -89,6 +89,7 @@ func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//  Belirtilen kullanıcı ID'sine ait gönderileri veritabanından çeker.
 func getOwnPosts(userID int) ([]Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -125,6 +126,7 @@ func getOwnPosts(userID int) ([]Post, error) {
 	return posts, nil
 }
 
+// Belirtilen kullanıcı ID'sinin beğendiği gönderileri veritabanından çeker.
 func getLikedPosts(userID int) ([]Post, error) {
 	query := `
 		SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
@@ -163,6 +165,7 @@ func getLikedPosts(userID int) ([]Post, error) {
 	return posts, nil
 }
 
+// Belirtilen kullanıcı ID'sine sahip kullanıcıyı veritabanından çeker.
 func getUserByID(userID int) (*User, error) {
 	var user User
 	query := "SELECT id, email, username, password FROM users WHERE id = ?"

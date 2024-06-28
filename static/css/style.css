@@ -42,30 +42,6 @@ body {
 }
 
 
-#centerolustur {
-    font-size: 20px;
-}
-
-#filtre {
-    font-size: 50px;
-}
-
-#centerprofilcont {
-    font-size: 12px;
-}
-
-#centersorubaslik {
-    font-size: 14px;
-}
-
-#centersorukatagori {
-    font-size: 14px;
-}
-
-#leftkatagoricont {
-    font-size: 13px;
-}
-
 
 @media (max-width: 1920px) {
     a {

@@ -40,6 +40,7 @@ type Comment struct {
 	Username           string // Kullanıcı adı
 }
 
+// Yeni bir gönderi oluşturmak için kullanılan HTTP işleyicisidir.
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	// Kullanıcının oturumunu kontrol et
 	session, err := datahandlers.GetSession(r)
@@ -90,6 +91,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//  Bir gönderiye yeni bir yorum eklemek için kullanılan HTTP işleyicisidir.
 func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err != nil || session == nil {
@@ -118,6 +120,7 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Belirli bir yorumu silmek için kullanılan HTTP işleyicisidir.
 func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
 	if err != nil || session == nil {
