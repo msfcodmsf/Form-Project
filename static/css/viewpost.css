@@ -324,6 +324,13 @@ textarea {
 }
 
 
+@media (max-width: 1600px) {
+
+  #centerprofilcont {
+    font-size: 14px;
+    width: 18%;
+  }
+}
 
 @media (max-width: 1920px) {
 
