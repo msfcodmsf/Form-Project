@@ -241,6 +241,9 @@ body {
 
 }
 
+send button {
+    background-color: #1eb787;
+}
 
 /**Night Mode**/
 body.night-mode #centerprofilcont,

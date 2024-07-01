@@ -102,7 +102,7 @@ a {
     transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
     font-family: 'Arial', sans-serif;
     box-shadow: 7px 7px 7px rgb(17, 40, 62);
-    
+
 }
 
 #leftkatagoricontyazı {
@@ -288,9 +288,6 @@ a {
 
     /* Paragraf alt boşluğunu kaldır */
 }
-
-
-
 
 #deletePostForm {
     position: absolute;
@@ -519,15 +516,15 @@ textarea {
     }
 
     #centersorukatagori {
+        font-size: 13px;
+    }
+
+    #leftkatagoricontyazı {
         font-size: 15px;
     }
 
-    #leftkatagoricont {
-        font-size: 14px;
-    }
-
     #centersorubaslik {
-        font-size: 16px;
+        font-size: 15px;
     }
 }
 
