@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/facebook"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 )
@@ -56,10 +57,12 @@ var (
 )
 
 type Config struct {
-	GoogleClientID     string `json:"google_client_id"` 
-	GoogleClientSecret string `json:"google_client_secret"`
-	GitHubClientID     string `json:"github_client_id"`
-	GitHubClientSecret string `json:"github_client_secret"`
+	GoogleClientID       string `json:"google_client_id"`
+	GoogleClientSecret   string `json:"google_client_secret"`
+	GitHubClientID       string `json:"github_client_id"`
+	GitHubClientSecret   string `json:"github_client_secret"`
+	FacebookClientID     string `json:"facebook_client_id"`
+	FacebookClientSecret string `json:"facebook_client_secret"`
 }
 
 func loadConfig() {
@@ -78,6 +81,7 @@ func loadConfig() {
 
 var googleOauthConfig *oauth2.Config
 var githubOauthConfig *oauth2.Config
+var facebookOauthConfig *oauth2.Config
 
 // Paket yüklenirken otomatik olarak çalışır.
 func init() {
@@ -98,6 +102,13 @@ func init() {
 		ClientSecret: config.GitHubClientSecret,
 		Scopes:       []string{"user:email"},
 		Endpoint:     github.Endpoint,
+	}
+	facebookOauthConfig = &oauth2.Config{
+		RedirectURL:  "http://localhost:8065/facebook/callback",
+		ClientID:     config.FacebookClientID,
+		ClientSecret: config.FacebookClientSecret,
+		Scopes:       []string{"email"},
+		Endpoint:     facebook.Endpoint,
 	}
 }
 
@@ -135,8 +146,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-//  Verilen filtrelere (arama sorgusu, kategori, filtre türü, kullanıcı ID'si) göre gönderileri veritabanından çeker.
+// Verilen filtrelere (arama sorgusu, kategori, filtre türü, kullanıcı ID'si) göre gönderileri veritabanından çeker.
 func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -332,7 +342,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//  Kayıt formunu göstermek için HTML şablonunu render eder.
+// Kayıt formunu göstermek için HTML şablonunu render eder.
 func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
 	tmpl, err := template.ParseFiles("templates/register.html")
 	if err != nil {
@@ -433,7 +443,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-
 func HandleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	url := githubOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
@@ -525,7 +534,7 @@ func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) { // Google tarafından kimlik doğrulamasından geçtiğini ve uygulamanıza yetki verdiğini gösterir.
+func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	token, err := googleOauthConfig.Exchange(r.Context(), code)
 	if err != nil {
@@ -564,7 +573,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) { // Google ta
 	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
 
-func generateRandomString(length int) string {  // Kullancı isimlerinin sonuna random karakterler atarak diğer kullanıcılarla aynı isimde olmamasını sağlıyor.
+func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
 	for i := range b {
@@ -631,4 +640,66 @@ func SifreUnutHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func HandleFacebookLogin(w http.ResponseWriter, r *http.Request) {
+	url := facebookOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func HandleFacebookCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	token, err := facebookOauthConfig.Exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+		return
+	}
+
+	email, name, err := getEmailAndNameFromFacebook(token)
+	if err != nil {
+		http.Error(w, "Failed to get user info from Facebook", http.StatusInternalServerError)
+		return
+	}
+
+	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
+
+	userID, err := getOrCreateUser(email, username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	sessionToken, err := createSession(userID)
+	if err != nil {
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
+}
+
+func getEmailAndNameFromFacebook(token *oauth2.Token) (string, string, error) {
+	client := facebookOauthConfig.Client(oauth2.NoContext, token)
+	resp, err := client.Get("https://graph.facebook.com/me?fields=id,name,email")
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	var userInfo struct {
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		return "", "", err
+	}
+
+	return userInfo.Email, userInfo.Name, nil
 }

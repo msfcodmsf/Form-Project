@@ -26,6 +26,9 @@ func Allhandlers() { // Bu fonksiyon, tüm istek işleyicilerini kaydeder.
     // GitHub Oturum İşlemleri:
     http.HandleFunc("/github/login", homehandlers.HandleGitHubLogin)         // GitHub ile oturum açma işlemi için işleyici.
     http.HandleFunc("/github/callback", homehandlers.HandleGitHubCallback)   // GitHub'dan dönen callback isteği için işleyici.
+    // Facebook Oturum İşlemleri:
+    http.HandleFunc("/facebook/login", homehandlers.HandleFacebookLogin)         
+    http.HandleFunc("/facebook/callback", homehandlers.HandleFacebookCallback)
 
     // Diğer İşleyiciler:
     http.HandleFunc("/", homehandlers.HomeHandler)             // Ana sayfa için işleyici.
