@@ -36,13 +36,16 @@
         <!-- Google ile giriş düğmesi -->
         <div id="buttongiriscont">
             <div id="buttongirisgoogle">
-                <a href="/google/login"><button class="google-btn"><img src="/static/png/google.png" width="50%" height="20%"></button></a>
+                <a href="/google/login"><button class="google-btn"><img src="/static/png/google.png" width="50%"
+                            height="20%"></button></a>
             </div>
             <div id="buttongirisgithub">
-                <a href="/github/login"><button class="github-btn"><img src="/static/png/github.png" width="50%" height="20%"></button></a>
+                <a href="/github/login"><button class="github-btn"><img src="/static/png/github.png" width="50%"
+                            height="20%"></button></a>
             </div>
             <div id="buttongirisfacebook">
-                <a href="/facebook/login"><button class="facebook-btn"><img src="/static/png/facebook.png" width="50%" height="20%"></button></a>
+                <a href="/facebook/login"><button class="facebook-btn"><img src="/static/png/facebook.png" width="50%"
+                            height="20%"></button></a>
             </div>
 
         </div>
@@ -68,6 +71,24 @@
             window.location.href = 'index.html';
         }
     </script>
+<script>
+    // Hata mesajlarını tutacak bir değişken
+    var errorMessages = {
+        "Email": "" // Başlangıçta boş bir hata mesajı
+    };
+    // Kayıt formunu gönderirken kontrol yapacak fonksiyon
+    function validateForm() {
+        var email = document.getElementById("email").value;
+
+        // E-posta zaten kayıtlıysa hata göster
+        if (errorMessages["Email"] !== "") {
+            alert(errorMessages["Email"]);
+            return false; // Formu gönderme
+        }
+
+        return true; // Formu gönder
+    }
+</script>
 
 </body>
 

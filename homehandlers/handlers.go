@@ -2,6 +2,7 @@ package homehandlers
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"form-project/datahandlers"
@@ -52,8 +53,9 @@ type RegisterTemplateData struct {
 }
 
 var (
-	validate = validator.New()
-	config   Config
+	validate    = validator.New()
+	config      Config
+	registering = false // Kaydetme veya giriş yapma işlemini ayırt etmek için
 )
 
 type Config struct {
@@ -79,23 +81,23 @@ func loadConfig() {
 	}
 }
 
-var googleOauthConfig *oauth2.Config
+// OAuth 2.0 yapılandırmalarını tutmak için genel değişkenler
+var googleOauthConfig *oauth2.Config // googleOauthConfig değişkeni, Google OAuth 2.0 yapılandırmasını tutar.
 var githubOauthConfig *oauth2.Config
 var facebookOauthConfig *oauth2.Config
-
+var oauthStateStringGoogle string // Google OAuth durumu için
 // Paket yüklenirken otomatik olarak çalışır.
 func init() {
 	loadConfig()
+	 // Google OAuth 2.0 yapılandırması oluşturulur.
 	googleOauthConfig = &oauth2.Config{
 		RedirectURL:  "http://localhost:8065/google/callback",
 		ClientID:     config.GoogleClientID,
 		ClientSecret: config.GoogleClientSecret,
-		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/userinfo.profile",
-		},
-		Endpoint: google.Endpoint,
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		Endpoint:     google.Endpoint,
 	}
+
 	githubOauthConfig = &oauth2.Config{
 		RedirectURL:  "http://localhost:8065/github/callback",
 		ClientID:     config.GitHubClientID,
@@ -103,6 +105,7 @@ func init() {
 		Scopes:       []string{"user:email"},
 		Endpoint:     github.Endpoint,
 	}
+
 	facebookOauthConfig = &oauth2.Config{
 		RedirectURL:  "http://localhost:8065/facebook/callback",
 		ClientID:     config.FacebookClientID,
@@ -110,6 +113,33 @@ func init() {
 		Scopes:       []string{"email"},
 		Endpoint:     facebook.Endpoint,
 	}
+}
+
+// HandleGoogleLogin fonksiyonu, Google ile giriş yapmayı başlatır.
+func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	registering = false
+	oauthStateStringGoogle = generateNonce()
+	url := googleOauthConfig.AuthCodeURL(oauthStateStringGoogle, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+func generateNonce() string {
+	// Rastgele 32 byte veri oluşturulur
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		// Eğer rastgele veri oluşturulurken hata alınırsa panic ile program sonlandırılır.
+		panic(err)
+	}
+	// Oluşturulan byte slice base64 URL encoding ile string formatına dönüştürülür ve döndürülür
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+// HandleGoogleRegister fonksiyonu, Google ile kaydolmayı başlatır.
+func HandleGoogleRegister(w http.ResponseWriter, r *http.Request) {
+	registering = true
+	oauthStateStringGoogle = generateNonce()
+	url := googleOauthConfig.AuthCodeURL(oauthStateStringGoogle, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 // Ana sayfayı görüntüler.
@@ -216,25 +246,243 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 	return posts, nil
 }
 
-// Kullanıcı kaydını işler.
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is already logged in
 	session, err := datahandlers.GetSession(r)
 	if err == nil && session != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodPost:
+	// Check for email existence in the database (GET or POST request)
+	errorMessages := make(map[string]string)
+	email := r.FormValue("email")
+	if email == "" {
+		email = r.URL.Query().Get("email")
+	}
+
+	if email != "" {
+		existingUser, _ := getUserByEmail(email)
+		if existingUser != nil {
+			errorMessages["Email"] = "Bu Email zaten kayıtlı."
+		}
+	}
+
+    switch r.Method {
+    case http.MethodPost:
+        err := registerUser(w, r)
+        if err != nil {
+            // ... (handle other errors)
+
+            // Pass specific error message to the template
+            if err.Error() == "user already exists" {
+                errorMessages["Email"] = "Bu Email zaten kayıtlı."
+            } else if err.Error() == "username already exists" {
+                errorMessages["Username"] = "Bu kullanıcı adı zaten alınmış."
+            } else {
+                errorMessages["Email"] = err.Error() // Generic error message
+            }
+
+            renderRegisterTemplate(w, RegisterTemplateData{ErrorMessages: errorMessages})
+            return
+        }
+	default: // GET request
+		tmpl, err := template.ParseFiles("templates/register.html")
+		if err != nil {
+			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// Şablon verilerini hazırla
+		data := RegisterTemplateData{
+			ErrorMessages: errorMessages, // Hata mesajlarını şablona aktar
+			Email:         email,
+		}
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func loginError(w http.ResponseWriter, r *http.Request, message string) {
+	redirectURL := "/login?error=" + message
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
+func registerUser(w http.ResponseWriter, r *http.Request) error {
+	email := r.FormValue("email")
+	googleOAuth := r.FormValue("google_oauth")
+
+	// 1. Check if email exists (regardless of registration method)
+	var existingUserID int
+	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&existingUserID)
+	existingUser, _ := getUserByEmail(email)
+    if existingUser != nil {
+        return fmt.Errorf("user already exists") 
+    }
+
+
+	var user User
+	if googleOAuth == "true" {
+		// 2b. Google OAuth (New Registration)
+		code := r.FormValue("code")
+		token, err := googleOauthConfig.Exchange(r.Context(), code)
+		if err != nil {
+			return err
+		}
+
+		email, name, err := getEmailAndNameFromGoogle(token)
+		if err != nil {
+			return err
+		}
+
+		username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
+
+		user = User{
+			Email:    email,
+			Username: sql.NullString{String: username, Valid: true},
+			Password: sql.NullString{Valid: false}, // No password for Google OAuth
+		}
+	} else { // Normal registration
+		// 2d. Normal Registration (New Account)
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		// Username check
+		var count int
+		err := datahandlers.DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username).Scan(&count)
+		if err != nil {
+			return err
+		}
+		if count > 0 {
+			registerError(w, r, "username already exists")
+			return fmt.Errorf("username already exists")
+		}
+
+		// Password validation
+		if err := validate.Var(password, "required,min=6"); err != nil {
+			return err
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+
+		user = User{
+			Email:    email,
+			Username: sql.NullString{String: username, Valid: true},
+			Password: sql.NullString{String: string(hashedPassword), Valid: true},
+		}
+	}
+
+	// 3. Save the user
+	err = saveUser(&user)
+	if err != nil {
+		return err
+	}
+
+	// 4. Create session and redirect
+	sessionToken, err := createSession(int64(user.ID))
+	if err != nil {
+		return err
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true, // If using HTTPS
+	})
+
+	http.Redirect(w, r, "/myprofil", http.StatusSeeOther) // Redirect to profile page on successful registration
+
+	return nil // Successful registration
+}
+
+func registerError(w http.ResponseWriter, r *http.Request, s string) {
+	panic("unimplemented")
+}
+
+func saveUser(user *User) error {
+	_, err := datahandlers.DB.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", user.Email, user.Username, user.Password)
+	return err
+}
+
+func getUserByEmail(email string) (*User, error) {
+	var user User
+	err := datahandlers.DB.QueryRow("SELECT id, email, username, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Username, &user.Password)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // User not found
+		}
+		return nil, err // Database error
+	}
+	return &user, nil
+}
+
+func getErrorMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email address"
+	default:
+		return "Validation error" // Generic error message
+	}
+}
+
+func getGoogleUserByEmail(email string) (int64, error) {
+	var userID int64
+	// Check for null password (indicating Google registration)
+	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ? AND password IS NULL", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil // User not found
+		}
+		return 0, err // Database error
+	}
+	return userID, nil
+}
+
+// Kayıt formunu göstermek için HTML şablonunu render eder.
+func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
+    tmpl, err := template.ParseFiles("templates/register.html")
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+    }
+}
+
+// Kullanıcı oturum açma işlemini işler.
+// Kullanıcı oturum açma işlemini işler.
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Kullanıcı zaten giriş yapmış mı kontrol et
+	session, err := datahandlers.GetSession(r)
+	if err == nil && session != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Hata mesajını taşımak için bir yapı oluşturun
+	tmplData := struct {
+		Error string
+	}{}
+
+	if r.Method == http.MethodPost {
 		email := r.FormValue("email")
 		password := r.FormValue("password")
-		confirmPassword := r.FormValue("confirm_password")
-		googleOAuth := r.FormValue("google_oauth") // Check if Google OAuth info is present
-
-		var user User
+		googleOAuth := r.FormValue("google_oauth")
 
 		if googleOAuth == "true" {
-			// Handle Google OAuth registration
+			// Google OAuth ile giriş yapma işlemleri
 			code := r.FormValue("code")
 			token, err := googleOauthConfig.Exchange(r.Context(), code)
 			if err != nil {
@@ -242,19 +490,20 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			email, name, err := getEmailAndNameFromGoogle(token)
+			email, _, err := getEmailAndNameFromGoogle(token)
 			if err != nil {
 				http.Error(w, "Failed to get user info from Google", http.StatusInternalServerError)
 				return
 			}
 
-			// Generate a username based on Google name
-			username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
-
-			// Insert or retrieve user ID
-			userID, err := getOrCreateUser(email, username)
+			// Google ile kayıtlı kullanıcıyı bul
+			userID, err := getGoogleUserByEmail(email)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
+				if err == sql.ErrNoRows {
+					utils.HandleErr(w, err, "User not found. Please register first.", http.StatusUnauthorized)
+					return
+				}
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 				return
 			}
 
@@ -273,134 +522,51 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 			http.Redirect(w, r, "/myprofil", http.StatusSeeOther)
 			return
-		}
 
-		// Handle traditional registration
-		username := r.FormValue("username")
-
-		user = User{
-			Email:    email,
-			Username: sql.NullString{String: username, Valid: true}, // Google kaydında null olmayacak
-			Password: sql.NullString{String: password, Valid: true}, // Google kaydında null olmayacak
-		}
-
-		err := validate.Struct(user)
-		if err != nil {
-			errorMessages := make(map[string]string)
-			for _, err := range err.(validator.ValidationErrors) {
-				field := err.Field()
-				switch field {
-				case "Username":
-					errorMessages[field] = "Username must be alphanumeric and between 3 and 20 characters long."
-				case "Password":
-					errorMessages[field] = "Password must be at least 6 characters long."
-				case "Email":
-					errorMessages[field] = "Invalid email format."
-				default:
-					errorMessages[field] = fmt.Sprintf("Validation error for '%s' failed on the '%s' tag", field, err.Tag())
+		} else {
+			// Normal giriş yapma işlemleri
+			var id int
+			var hashedPassword string
+			err := datahandlers.DB.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &hashedPassword)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					tmplData.Error = "Geçersiz e-posta veya şifre" // Hata mesajını tmplData'ya atayın
+				} else {
+					utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 				}
+				return
 			}
-			renderRegisterTemplate(w, RegisterTemplateData{
-				ErrorMessages: errorMessages,
-				Email:         user.Email,
-				Username:      user.Username.String,
-			})
-			return
-		}
-
-		if password != confirmPassword {
-			errorMessages := map[string]string{"ConfirmPassword": "Password and confirm password do not match."}
-			renderRegisterTemplate(w, RegisterTemplateData{
-				ErrorMessages: errorMessages,
-				Email:         user.Email,
-				Username:      user.Username.String,
-			})
-			return
-		}
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		_, err = datahandlers.DB.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", user.Email, user.Username.String, hashedPassword)
-		if err != nil {
-			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-				utils.HandleErr(w, err, "Email or username already taken", http.StatusBadRequest)
-			} else {
-				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+			if err != nil {
+				tmplData.Error = "Geçersiz e-posta veya şifre" // Hata mesajını tmplData'ya atayın
+				return
 			}
+
+			sessionToken := uuid.New().String()
+			expiresAt := time.Now().Add(10 * time.Minute)
+
+			_, err = datahandlers.DB.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
+			if err != nil {
+				utils.HandleErr(w, err, "Session creation failed", http.StatusInternalServerError)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session_token",
+				Value:    sessionToken,
+				Expires:  expiresAt,
+				HttpOnly: true,
+				Secure:   true,
+			})
+
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-
-	default: // GET request
-		renderRegisterTemplate(w, RegisterTemplateData{})
-	}
-}
-
-// Kayıt formunu göstermek için HTML şablonunu render eder.
-func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
-	tmpl, err := template.ParseFiles("templates/register.html")
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
 	}
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-	}
-}
-
-// Kullanıcı oturum açma işlemini işler.
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := datahandlers.GetSession(r)
-	if err == nil && session != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	if r.Method == http.MethodPost {
-		email := r.FormValue("email")
-		password := r.FormValue("password")
-
-		var id int
-		var hashedPassword string
-		err := datahandlers.DB.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &hashedPassword)
-		if err != nil {
-			utils.HandleErr(w, err, "Invalid email", http.StatusUnauthorized)
-			return
-		}
-
-		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-		if err != nil {
-			utils.HandleErr(w, err, "Invalid password", http.StatusUnauthorized)
-			return
-		}
-
-		sessionToken := uuid.New().String()
-		expiresAt := time.Now().Add(10 * time.Minute)
-
-		_, err = datahandlers.DB.Exec("INSERT INTO sessions (id, user_id, expiry) VALUES (?, ?, ?)", sessionToken, id, expiresAt)
-		if err != nil {
-			utils.HandleErr(w, err, "Session creation failed", http.StatusInternalServerError)
-			return
-		}
-
-		http.SetCookie(w, &http.Cookie{
-			Name:     "session_token",
-			Value:    sessionToken,
-			Expires:  expiresAt,
-			HttpOnly: true,
-			Secure:   true, // Ensure this is set when using HTTPS
-		})
-
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
+	// Query parametrelerinden hata mesajını al
+	if errorMessage := r.URL.Query().Get("error"); errorMessage != "" {
+		tmplData.Error = errorMessage
 	}
 
 	tmpl, err := template.ParseFiles("templates/login.html")
@@ -409,7 +575,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = tmpl.Execute(w, nil)
+	// Hata mesajını şablona geçirerek render et
+	err = tmpl.Execute(w, tmplData)
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
 	}
@@ -444,10 +611,14 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleGitHubLogin(w http.ResponseWriter, r *http.Request) {
-	url := githubOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	// GitHub OAuth 2.0 URL'sini oluştur ve kullanıcıyı yönlendirir
+	registering = false
+	oauthStateStringGoogle = generateNonce()
+	url := googleOauthConfig.AuthCodeURL(oauthStateStringGoogle, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+// GitHub callback işlemini gerçekleştirir
 func HandleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	token, err := githubOauthConfig.Exchange(r.Context(), code)
@@ -461,31 +632,80 @@ func HandleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user info from GitHub", http.StatusInternalServerError)
 		return
 	}
-
+	// Kullanıcı adını oluştur ve kullanıcıyı kaydet veya mevcut kullanıcıyı getir
 	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
 
-	userID, err := getOrCreateUser(email, username)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
-		return
+	if registering {
+		// Kayıt işlemi
+		user, _ := getUserByEmail(email)
+		if user != nil {
+			tmpl, err := template.ParseFiles("templates/register.html")
+			if err != nil {
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			data := RegisterTemplateData{Email: email}
+			data.ErrorMessages = map[string]string{"Email": "Bu Email zaten kayıtlı."}
+
+			// Şablonu işleyerek yanıtı gönder
+			err = tmpl.Execute(w, data)
+			if err != nil {
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			}
+		} else {
+			userId, _ := getOrCreateUser(email, username)
+
+			sessionToken, _ := createSession(userId)
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session_token",
+				Value:    sessionToken,
+				Path:     "/",
+				HttpOnly: true,
+			})
+			// Kayıt başarılı, kullanıcıyı profil sayfasına yönlendir
+			http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
+		}
+
+	} else {
+		// Oturum açma işlemi
+
+		// Kullanıcıyı e-posta ile veritabanında bul
+		var userID int
+		err = datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// Kullanıcı bulunamadı, hata mesajı göster
+				utils.HandleErr(w, err, "Kullanıcı bulunamadı. Lütfen önce kaydolun.", http.StatusUnauthorized)
+			} else {
+				// Veritabanı hatası
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Oturum oluştur
+		sessionToken, err := createSession(int64(userID))
+		if err != nil {
+			http.Error(w, "Oturum oluşturulamadı.", http.StatusInternalServerError)
+			return
+		}
+
+		// Tarayıcıya oturum çerezi gönder
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session_token",
+			Value:    sessionToken,
+			Path:     "/",
+			HttpOnly: true,
+		})
+
+		// Oturum açma başarılı, kullanıcıyı ana sayfaya yönlendir
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
-
-	sessionToken, err := createSession(userID)
-	if err != nil {
-		http.Error(w, "Failed to create session", http.StatusInternalServerError)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    sessionToken,
-		Path:     "/",
-		HttpOnly: true,
-	})
-
-	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
 
+// GitHub access token'ı kullanarak kullanıcı bilgilerini alır
 func getEmailAndNameFromGitHub(token *oauth2.Token) (string, string, error) {
 	client := githubOauthConfig.Client(oauth2.NoContext, token)
 	resp, err := client.Get("https://api.github.com/user")
@@ -493,7 +713,7 @@ func getEmailAndNameFromGitHub(token *oauth2.Token) (string, string, error) {
 		return "", "", err
 	}
 	defer resp.Body.Close()
-
+	// GitHub API'sinden dönen JSON'ı ayrıştır
 	var userInfo struct {
 		Email string `json:"email"`
 		Name  string `json:"name"`
@@ -529,49 +749,103 @@ func getEmailAndNameFromGitHub(token *oauth2.Token) (string, string, error) {
 	return userInfo.Email, userInfo.Name, nil
 }
 
-func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
-	url := googleOauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
+// HandleGoogleCallback fonksiyonu, Google'dan gelen callback isteğini işler.
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	// CSRF (Çapraz Site İstek Sahteciliği) koruması
+	if r.FormValue("state") != oauthStateStringGoogle {
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
+	// Google'dan dönen yetkilendirme kodunu al
 	code := r.URL.Query().Get("code")
+
+	// Yetkilendirme kodunu access token ile değiştir
 	token, err := googleOauthConfig.Exchange(r.Context(), code)
 	if err != nil {
-		http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+		http.Error(w, "Token değişimi başarısız oldu.", http.StatusInternalServerError)
 		return
 	}
 
+	// Access token ile Google'dan kullanıcı bilgilerini al
 	email, name, err := getEmailAndNameFromGoogle(token)
 	if err != nil {
-		http.Error(w, "Failed to get user info from Google", http.StatusInternalServerError)
+		http.Error(w, "Google'dan kullanıcı bilgileri alınamadı.", http.StatusInternalServerError)
 		return
 	}
 
-	// Validate işlemi yapmadan önce gelen ismi uygun hale getirme
-	username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5) // Boşlukları kaldırma gibi bir işlem yapabilirsiniz
+	// Kullanıcı adını oluştur (boşlukları kaldır ve küçük harfe çevir)
+	username := strings.ToLower(strings.ReplaceAll(name, " ", ""))
 
-	userID, err := getOrCreateUser(email, username)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save user info: %v", err), http.StatusInternalServerError)
-		return
+	if registering {
+		// Kayıt işlemi
+		user, _ := getUserByEmail(email)
+		if user != nil {
+			tmpl, err := template.ParseFiles("templates/register.html")
+			if err != nil {
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			data := RegisterTemplateData{Email: email}
+			data.ErrorMessages = map[string]string{"Email": "Bu Email zaten kayıtlı."}
+
+			// Şablonu işleyerek yanıtı gönder
+			err = tmpl.Execute(w, data)
+			if err != nil {
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			}
+		} else {
+			userId, _ := getOrCreateUser(email, username)
+
+			sessionToken, _ := createSession(userId)
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session_token",
+				Value:    sessionToken,
+				Path:     "/",
+				HttpOnly: true,
+			})
+			// Kayıt başarılı, kullanıcıyı profil sayfasına yönlendir
+			http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
+		}
+
+	} else {
+		// Oturum açma işlemi
+
+		// Kullanıcıyı e-posta ile veritabanında bul
+		var userID int
+		err = datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// Kullanıcı bulunamadı, hata mesajı göster
+				utils.HandleErr(w, err, "Kullanıcı bulunamadı. Lütfen önce kaydolun.", http.StatusUnauthorized)
+			} else {
+				// Veritabanı hatası
+				utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Oturum oluştur
+		sessionToken, err := createSession(int64(userID))
+		if err != nil {
+			http.Error(w, "Oturum oluşturulamadı.", http.StatusInternalServerError)
+			return
+		}
+
+		// Tarayıcıya oturum çerezi gönder
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session_token",
+			Value:    sessionToken,
+			Path:     "/",
+			HttpOnly: true,
+		})
+
+		// Oturum açma başarılı, kullanıcıyı ana sayfaya yönlendir
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
-
-	sessionToken, err := createSession(userID)
-	if err != nil {
-		http.Error(w, "Failed to create session", http.StatusInternalServerError)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    sessionToken,
-		Path:     "/",
-		HttpOnly: true,
-	})
-
-	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
+
 
 func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -604,18 +878,24 @@ func getEmailAndNameFromGoogle(token *oauth2.Token) (string, string, error) {
 func getOrCreateUser(email, username string) (int64, error) {
 	var userID int64
 	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
-	if err == sql.ErrNoRows {
-		res, err := datahandlers.DB.Exec("INSERT INTO users (email, username) VALUES (?, ?)", email, username)
-		if err != nil {
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// If user doesn't exist, create a new one
+			res, err := datahandlers.DB.Exec("INSERT INTO users (email, username) VALUES (?, ?)", email, username)
+			if err != nil {
+				return 0, err
+			}
+			userID, err = res.LastInsertId()
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			// Other database errors
 			return 0, err
 		}
-		userID, err = res.LastInsertId()
-		if err != nil {
-			return 0, err
-		}
-	} else if err != nil {
-		return 0, err
 	}
+
 	return userID, nil
 }
 
@@ -685,6 +965,7 @@ func HandleFacebookCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/myprofil", http.StatusTemporaryRedirect)
 }
 
+// Facebook profilinden e-posta adresini ve adını alır.
 func getEmailAndNameFromFacebook(token *oauth2.Token) (string, string, error) {
 	client := facebookOauthConfig.Client(oauth2.NoContext, token)
 	resp, err := client.Get("https://graph.facebook.com/me?fields=id,name,email")
