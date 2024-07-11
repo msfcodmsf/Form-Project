@@ -20,7 +20,9 @@ func Allhandlers() { // Bu fonksiyon, tüm istek işleyicilerini kaydeder.
     })
 
     http.HandleFunc("/google/register", homehandlers.HandleGoogleRegister)
-    
+    http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+    http.HandleFunc("/upload", homehandlers.UploadHandler)
+
     // Google Oturum İşlemleri:
     http.HandleFunc("/google/login", homehandlers.HandleGoogleLogin)        // Google ile oturum açma işlemi için işleyici.
     http.HandleFunc("/google/callback", homehandlers.HandleGoogleCallback)  // Google'dan dönen callback isteği için işleyici.

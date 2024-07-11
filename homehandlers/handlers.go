@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"form-project/datahandlers"
 	"form-project/utils"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -117,7 +119,8 @@ func init() {
 
 // HandleGoogleLogin fonksiyonu, Google ile giriş yapmayı başlatır.
 func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
-	registering = false
+	// Registerda registering değişkeni true olarak ayarlanır.
+	registering = false // Kullanılma amacı giriş yapma (login) ve kaydolma (register) işlemleri arasında ayrım yapmaktır.
 	oauthStateStringGoogle = generateNonce()
 	url := googleOauthConfig.AuthCodeURL(oauthStateStringGoogle, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
@@ -875,6 +878,7 @@ func getEmailAndNameFromGoogle(token *oauth2.Token) (string, string, error) {
 	return userInfo.Email, userInfo.Name, nil
 }
 
+// getOrCreateUser fonksiyonu, e-posta adresine göre kullanıcıyı bulur veya yeni bir kullanıcı oluşturur.
 func getOrCreateUser(email, username string) (int64, error) {
 	var userID int64
 	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
@@ -899,6 +903,7 @@ func getOrCreateUser(email, username string) (int64, error) {
 	return userID, nil
 }
 
+// createSession fonksiyonu, kullanıcı için yeni bir oturum oluşturur.
 func createSession(userID int64) (string, error) {
 	sessionToken := fmt.Sprintf("session-%d-%d", userID, time.Now().UnixNano())
 	expiry := time.Now().Add(10 * time.Minute)
@@ -984,3 +989,51 @@ func getEmailAndNameFromFacebook(token *oauth2.Token) (string, string, error) {
 
 	return userInfo.Email, userInfo.Name, nil
 }
+
+const maxUploadSize = 20 * 1024 * 1024 // 20 MB
+
+func UploadHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+    if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+        http.Error(w, "The uploaded file is too big. Please choose an file that's less than 20MB in size", http.StatusBadRequest)
+        return
+    }
+
+    file, handler, err := r.FormFile("file")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    defer file.Close()
+
+    // Dosya tipi kontrolü
+    allowedExtensions := map[string]bool{
+        ".jpg":  true,
+        ".jpeg": true,
+        ".png":  true,
+        ".gif":  true,
+    }
+    ext := filepath.Ext(handler.Filename)
+    if !allowedExtensions[ext] {
+        http.Error(w, "The provided file format is not allowed. Please upload a JPEG, PNG, or GIF image", http.StatusBadRequest)
+        return
+    }
+
+    // Dosyayı kaydet
+    f, err := os.OpenFile("./uploads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+    if err != nil {
+        http.Error(w, "Internal Server Error: Dosya kaydedilemedi.", http.StatusInternalServerError)
+        log.Println("Error saving file:", err) // Loglara hata mesajını yaz
+        return
+    }
+    defer f.Close()
+    io.Copy(f, file)
+
+    fmt.Fprintf(w, "File uploaded successfully: %s", handler.Filename)
+}
+

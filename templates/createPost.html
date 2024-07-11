@@ -16,10 +16,13 @@
                     <i id="themeIcon" class="fas fa-sun"></i></a>
             </span>
         </div>
+        
         <h1>Create Post</h1>
         <button class="close-btn" onclick="closeCreatePost()">×</button>
         <form action="/createPost" method="post">
             <div class="form-top">
+                <input type="file" id="image" name="image" accept=".jpg, .jpeg, .png, .gif">
+
                 <div>
                     <label for="title">Title</label>
                     <input type="text" id="title" name="title" required>
@@ -74,7 +77,6 @@
             }
         });
 
-        // Temizle butonunu hedefle
         // Temizle butonunu hedefle
         const clearButton = document.getElementById('clearButton');
 

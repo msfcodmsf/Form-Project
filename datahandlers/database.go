@@ -75,6 +75,22 @@ func CreateTables() {
 	UsersTables(DB)
 	VoteTables(DB)
 	CommentTables(DB)
+
+   // Posts tablosunu oluştur (image_path sütunu ile)
+   _, err := DB.Exec(`
+   CREATE TABLE IF NOT EXISTS posts (
+	   id INTEGER PRIMARY KEY AUTOINCREMENT,
+	   user_id INTEGER,
+	   title TEXT,
+	   content TEXT,
+	   categories TEXT,
+	   created_at TIMESTAMP,
+	   image_path TEXT -- Fotoğraf yolu sütunu
+   );
+`)
+if err != nil {
+   log.Fatal("Error creating posts table:", err)
+}
 }
 
 func SessionTables(db *sql.DB) {
