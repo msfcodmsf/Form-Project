@@ -38,19 +38,15 @@
     <div id="görünmezbar"></div>
     <!-- Profil container -->
     <div id="profileContainer">
-        <form action="/myprofil" method="post" enctype="multipart/form-data"> 
-            <input type="file" name="file">
+        <form id="uploadForm" action="/uploadProfilePicture" method="post" enctype="multipart/form-data">
+            <input type="file" id="profilePictureInput" name="profilePicture" accept="image/*">
             <button type="submit">Profil Resmi Yükle</button>
-        </form> 
-        
-        <!-- Profil Resmi -->
-        <img id="profilePicture" src="/static/png/pp.png" alt="Liyan Profil Fotoğrafı">
-        <!-- Sağ Profil Bilgileri Kısmı -->
+        </form>
+
+        <img id="profilePicture" src="{{if .User.ProfilePicturePath}}/uploads/{{.User.ProfilePicturePath}}{{else}}/static/png/pp.png{{end}}" alt="Profil Fotoğrafı">
+
         <div id="profileRight">
-            <!-- Profil Adı -->
-            <h2 id="profileName">{{ if .User.Username.Valid }}{{ .User.Username.String }}{{ else }}{{ "N/A" }}{{ end }}
-            </h2>
-            <!-- Profil Bilgileri -->
+            <h2 id="profileName">{{ if .User.Username.Valid }}{{ .User.Username.String }}{{ else }}{{ "N/A" }}{{ end }}</h2>
             <div id="profileInfo">
                 <p><strong>Email:</strong> {{.User.Email}}</p>
             </div>
@@ -163,6 +159,27 @@
             document.getElementById(tabId).classList.add('active');
         });
     </script>
+
+<script>
+    // Profil fotoğrafı yükleme formu gönderme
+    document.getElementById('uploadForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(this);
+        const xhr = new XMLHttpRequest();
+
+        xhr.open('POST', '/uploadProfilePicture', true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                // Yükleme başarılıysa, fotoğrafı güncelle
+                document.getElementById('profilePicture').src = '/uploads/' + xhr.responseText;
+            } else {
+                alert('Profil resmi yüklenemedi.');
+            }
+        };
+        xhr.send(formData);
+    });
+</script>
 </body>
 
 </html>

@@ -45,100 +45,111 @@ type Comment struct {
 	LikeCount          int
 	DislikeCount       int
 	Username           string // Kullanıcı adı
+	ImagePath          string // Add this line to include ImagePath
 }
 
+const maxUploadSize = 20 * 1024 * 1024 // 20 MB
+
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := datahandlers.GetSession(r)
-	if err != nil || session == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
+    session, err := datahandlers.GetSession(r)
+    if err != nil || session == nil {
+        http.Redirect(w, r, "/login", http.StatusSeeOther)
+        return
+    }
 
-	if r.Method == http.MethodPost {
-		title := r.FormValue("title")
-		content := r.FormValue("content")
-		categoriesJSON := r.FormValue("categories")
+    if r.Method == http.MethodPost {
+        // Form verilerini al
+        title := r.FormValue("title")
+        content := r.FormValue("content")
+        categoriesJSON := r.FormValue("categories")
 
-		var categories []string
-		err := json.Unmarshal([]byte(categoriesJSON), &categories)
-		if err != nil {
-			utils.HandleErr(w, err, "Invalid categories format", http.StatusBadRequest)
-			return
-		}
+        // Kategorileri JSON'dan ayrıştır
+        var categories []string
+        err := json.Unmarshal([]byte(categoriesJSON), &categories)
+        if err != nil {
+            utils.HandleErr(w, err, "Invalid categories format", http.StatusBadRequest)
+            return
+        }
 
-		// Fotoğrafı işle
-		var imagePath string
-		newFilename := "" // newFilename değişkenini burada tanımla
+        // Fotoğrafı işle
+        var imagePath string
+        newFilename := "" 
 
-		file, handler, err := r.FormFile("image")
-		if err != nil && err != http.ErrMissingFile {
-			utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
-			return
-		}
+        file, handler, err := r.FormFile("image")
+        if err != nil && err != http.ErrMissingFile {
+            utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
+            return
+        }
 
-		if file != nil { // Dosya varsa işle
-			defer file.Close()
+        if file != nil { // Dosya varsa işle
+            defer file.Close()
 
-			// Dosya uzantısını kontrol et
-			ext := filepath.Ext(handler.Filename)
-			allowedExtensions := map[string]bool{
-				".jpg":  true,
-				".jpeg": true,
-				".png":  true,
-				".gif":  true,
-			}
-			if !allowedExtensions[ext] {
-				utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
-				return
-			}
+            // Dosya boyutunu kontrol et
+            if handler.Size > maxUploadSize {
+                utils.HandleErr(w, fmt.Errorf("file size exceeds limit"), "File size exceeds limit (20MB)", http.StatusBadRequest)
+                return
+            }
 
-			// Benzersiz dosya adı oluştur ve newFilename'e ata
-			imageUUID := uuid.New().String()
-			newFilename = imageUUID + ext
+            // Dosya uzantısını kontrol et
+            ext := filepath.Ext(handler.Filename)
+            allowedExtensions := map[string]bool{
+                ".jpg":  true,
+                ".jpeg": true,
+                ".png":  true,
+                ".gif":  true,
+            }
+            if !allowedExtensions[ext] {
+                utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
+                return
+            }
 
-			// uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
-			uploadsDir := "./uploads"
-			if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
-				os.Mkdir(uploadsDir, 0755) // Klasörü oluştur
-			}
+            // Benzersiz dosya adı oluştur ve newFilename'e ata
+            imageUUID := uuid.New().String()
+            newFilename = imageUUID + ext
 
-			// Kaydedilecek dosyanın tam yolunu oluştur
-			imagePath = filepath.Join(uploadsDir, newFilename)
+            // uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
+            uploadsDir := "./uploads"
+            if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+                os.Mkdir(uploadsDir, 0755) // Klasörü oluştur
+            }
 
-			// Fotoğrafı kaydet
-			if err := saveImage(file, imagePath); err != nil {
-				utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
-				return
-			}
-		}
+            // Kaydedilecek dosyanın tam yolunu oluştur
+            imagePath = filepath.Join(uploadsDir, newFilename)
 
-		categoriesData, err := json.Marshal(categories)
-		if err != nil {
-			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+            // Fotoğrafı kaydet
+            if err := saveImage(file, imagePath); err != nil {
+                utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
+                return
+            }
+        }
 
-		// Veritabanına kaydet (imagePath ile birlikte)
-		_, err = datahandlers.DB.Exec("INSERT INTO posts (user_id, title, content, categories, created_at, image_path) VALUES (?, ?, ?, ?, ?, ?)",
-			session.UserID, title, content, string(categoriesData), time.Now(), newFilename) // newFilename'i kullan
-		if err != nil {
-			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+        categoriesData, err := json.Marshal(categories)
+        if err != nil {
+            utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+            return
+        }
 
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
+        // Veritabanına kaydet (imagePath ile birlikte)
+        _, err = datahandlers.DB.Exec("INSERT INTO posts (user_id, title, content, categories, created_at, image_path) VALUES (?, ?, ?, ?, ?, ?)",
+            session.UserID, title, content, string(categoriesData), time.Now(), newFilename)
+        if err != nil {
+            utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+            return
+        }
 
-	tmpl, err := template.ParseFiles("templates/createPost.html")
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-	}
+        http.Redirect(w, r, "/", http.StatusSeeOther)
+        return
+    }
+
+    tmpl, err := template.ParseFiles("templates/createPost.html")
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+    err = tmpl.Execute(w, nil)
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+    }
 }
 
 // Fotoğrafı kaydet
@@ -159,36 +170,98 @@ func saveImage(file multipart.File, imagePath string) error {
 	return nil
 }
 
+
 // Bir gönderiye yeni bir yorum eklemek için kullanılan HTTP işleyicisidir.
 func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := datahandlers.GetSession(r)
-	if err != nil || session == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	
+    session, err := datahandlers.GetSession(r)
+    if err != nil || session == nil {
+        http.Redirect(w, r, "/login", http.StatusSeeOther)
+        return
+    }
 
-	if r.Method == http.MethodPost {
-		postID := r.FormValue("post_id")
-		content := r.FormValue("content")
+    if r.Method == http.MethodPost {
+        err := r.ParseMultipartForm(32 << 20) // 32 MB maksimum upload boyutu
+        if err != nil {
+            utils.HandleErr(w, err, "Error parsing multipart form", http.StatusBadRequest)
+            return
+        }
 
-		if content == "" {
-			utils.HandleErr(w, nil, "Content is required", http.StatusBadRequest)
-			return
-		}
+        postIDStr := r.FormValue("post_id")
+        content := r.FormValue("content")
 
-		_, err := datahandlers.DB.Exec("INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
-			postID, session.UserID, content, time.Now())
-		if err != nil {
-			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+        if content == "" {
+            utils.HandleErr(w, nil, "Content is required", http.StatusBadRequest)
+            return
+        }
 
-		http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%s", postID), http.StatusSeeOther)
-		return
-	}
+        postID, err := strconv.Atoi(postIDStr)
+        if err != nil {
+            utils.HandleErr(w, err, "Invalid post ID", http.StatusBadRequest)
+            return
+        }
+
+        // Yorum fotoğrafını işle
+        var commentImagePath string
+        newFilename := "" 
+
+        file, handler, err := r.FormFile("commentImage")
+        if err == nil { // Dosya varsa işle
+            defer file.Close()
+
+            // Dosya boyutunu kontrol et
+            if handler.Size > maxUploadSize {
+                utils.HandleErr(w, fmt.Errorf("file size exceeds limit"), "File size exceeds limit (20MB)", http.StatusBadRequest)
+                return
+            }
+
+            // Dosya uzantısını kontrol et
+            ext := filepath.Ext(handler.Filename)
+            allowedExtensions := map[string]bool{
+                ".jpg":  true,
+                ".jpeg": true,
+                ".png":  true,
+                ".gif":  true,
+            }
+            if !allowedExtensions[ext] {
+                utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
+                return
+            }
+
+            // Benzersiz dosya adı oluştur ve newFilename'e ata
+            imageUUID := uuid.New().String()
+            newFilename = imageUUID + ext
+
+            // uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
+            uploadsDir := "./uploads"
+            if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+                os.Mkdir(uploadsDir, 0755) // Klasörü oluştur
+            }
+
+            // Kaydedilecek dosyanın tam yolunu oluştur
+            commentImagePath = filepath.Join(uploadsDir, newFilename)
+
+            // Fotoğrafı kaydet
+            if err := saveImage(file, commentImagePath); err != nil {
+                utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
+                return
+            }
+        } else if err != http.ErrMissingFile { // Dosya yoksa hata ver
+            utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
+            return
+        }
+
+        // Veritabanına kaydet (commentImagePath ile birlikte)
+        _, err = datahandlers.DB.Exec("INSERT INTO comments (post_id, user_id, content, created_at, image_path) VALUES (?, ?, ?, ?, ?)",
+            postID, session.UserID, content, time.Now(), newFilename)
+        if err != nil {
+            utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+            return
+        }
+
+        http.Redirect(w, r, fmt.Sprintf("/viewPost?id=%d", postID), http.StatusSeeOther)
+        return
+    }
 }
-
 // Belirli bir yorumu silmek için kullanılan HTTP işleyicisidir.
 func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
@@ -417,34 +490,36 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
 	post.Categories = categories
 
-	rows, err := datahandlers.DB.Query(`
-        SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.username,
-            COALESCE(SUM(CASE WHEN v.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
-            COALESCE(SUM(CASE WHEN v.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
+    rows, err := datahandlers.DB.Query(`
+        SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.username, c.image_path, 
+               COALESCE(SUM(CASE WHEN v.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
+               COALESCE(SUM(CASE WHEN v.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
         FROM comments c
         JOIN users u ON c.user_id = u.id
         LEFT JOIN votes v ON v.comment_id = c.id
         WHERE c.post_id = ? AND c.deleted = 0
-        GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, u.username
+        GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, u.username, c.image_path 
         ORDER BY c.created_at DESC`, postID)
-	if err != nil {
-		log.Println("Error querying comments:", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var comments []Comment
-	for rows.Next() {
-		var comment Comment
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.Username, &comment.LikeCount, &comment.DislikeCount); err != nil {
-			log.Println("Error scanning comment:", err)
+		if err != nil {
+			log.Println("Error querying comments:", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		comment.CreatedAtFormatted = comment.CreatedAt.Format("2006-01-02 15:04")
-		comments = append(comments, comment)
-	}
+	defer rows.Close()
+
+	var comments []Comment // Comment struct'ını kullanın, posthandlers.Comment değil
+    for rows.Next() {
+        var comment Comment
+        err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.Username, &comment.ImagePath, &comment.LikeCount, &comment.DislikeCount) 
+        // image_path sütunu created_at'den sonra geldiği için sıralaması değiştirildi.
+        if err != nil {
+            log.Println("Error scanning comment:", err)
+            http.Error(w, "Internal server error", http.StatusInternalServerError)
+            return
+        }
+        comment.CreatedAtFormatted = comment.CreatedAt.Format("2006-01-02 15:04")
+        comments = append(comments, comment)
+    }
 	if err := rows.Err(); err != nil {
 		log.Println("Rows error:", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

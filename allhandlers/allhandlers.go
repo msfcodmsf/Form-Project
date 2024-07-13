@@ -18,7 +18,7 @@ func Allhandlers() { // Bu fonksiyon, tüm istek işleyicilerini kaydeder.
         }
         http.ServeFile(w, r, path)                                                // Statik dosyayı sunar.
     })
-
+    http.HandleFunc("/uploadProfilePicture", morehandlers.UploadProfilePictureHandler)
     http.HandleFunc("/google/register", homehandlers.HandleGoogleRegister)
     http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
     http.HandleFunc("/upload", homehandlers.UploadHandler)

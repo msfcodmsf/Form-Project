@@ -135,18 +135,14 @@ body {
 }
 
 #centercont::before {
-  content: "";
   width: 1px;
-  /* Çizgi kalınlığı */
   height: 100%;
-  /* Öğenin yüksekliği kadar */
   background-color: #000;
-  /* Çizgi rengi */
   position: absolute;
   left: 18%;
-  /* İstediğiniz yere göre ayarlayın */
   top: 0;
 }
+
 
 .text-block {
   /* Metin bloğu stilleri */
@@ -349,8 +345,11 @@ textarea {
 
 .modal-content {
   display: block;
-  width: 100%; 
-  height: 100%;
+  width: 80%; 
+  height: 80%;
+  margin-left: 10%;
+  margin-right: 10%;
+  margin-top: 5%;
 }
 
 .close-button {

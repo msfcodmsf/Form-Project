@@ -91,6 +91,9 @@ func CreateTables() {
 if err != nil {
    log.Fatal("Error creating posts table:", err)
 }
+if err != nil {
+	log.Fatal("Error adding profile_picture_path column to users table:", err)
+}
 }
 
 func SessionTables(db *sql.DB) {
