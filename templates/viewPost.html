@@ -117,10 +117,17 @@
             </div>
             <!-- Gönderi başlığı ve içeriği -->
             <div id="centersorubaslik">
+                {{if .Post.ImagePath}}
+               
+                {{end}}
                 <h3>{{.Post.Title}}</h3>
+                <img id="postImage" src="/uploads/{{.Post.ImagePath}}" alt="Post Image" onclick="openImageModal()"> 
                 <div class="text-block">
-                    <img src="http://localhost:8065/uploads/{{.Post.ImagePath}}" alt="Post Image" width="100%" height="100%">
                     <p>{{.Post.Content}}</p>
+                </div>
+                <div id="imageModal" class="modal">
+                    <span class="close-button" onclick="closeImageModal()">&times;</span>
+                    <img class="modal-content" id="modalImage">
                 </div>
                 <!-- Gönderi oluşturulma tarihi --><!-- Beğeni ve beğenmeme sayıları -->
                 <p>{{.Post.CreatedAtFormatted}} Likes: <span id="post-like-count">{{.Post.LikeCount}}</span> Dislikes: <span id="post-dislike-count">{{.Post.DislikeCount}}</span></p>
@@ -212,6 +219,16 @@
             localStorage.setItem("tema", tema);
             changeTema();
         });
+    </script>
+    <script>
+        function openImageModal() {
+    document.getElementById("imageModal").style.display = "block";
+    document.getElementById("modalImage").src = document.getElementById("postImage").src;
+}
+
+function closeImageModal() {
+    document.getElementById("imageModal").style.display = "none";
+}
     </script>
 
     <!-- Tema değiştirme scripti -->

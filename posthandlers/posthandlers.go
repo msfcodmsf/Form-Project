@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -46,100 +47,118 @@ type Comment struct {
 	Username           string // Kullanıcı adı
 }
 
-// Yeni bir gönderi oluşturmak için kullanılan HTTP işleyicisidir.
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
-    session, err := datahandlers.GetSession(r)
-    if err != nil || session == nil {
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-    if r.Method == http.MethodPost {
-        title := r.FormValue("title")
-        content := r.FormValue("content")
-        categoriesJSON := r.FormValue("categories")
+	if r.Method == http.MethodPost {
+		title := r.FormValue("title")
+		content := r.FormValue("content")
+		categoriesJSON := r.FormValue("categories")
 
-        var categories []string
-        err := json.Unmarshal([]byte(categoriesJSON), &categories)
-        if err != nil {
-            utils.HandleErr(w, err, "Invalid categories format", http.StatusBadRequest)
-            return
-        }
+		var categories []string
+		err := json.Unmarshal([]byte(categoriesJSON), &categories)
+		if err != nil {
+			utils.HandleErr(w, err, "Invalid categories format", http.StatusBadRequest)
+			return
+		}
 
-        // Fotoğrafı işle
-        file, handler, err := r.FormFile("image")
-        var imagePath string
-        if err == nil {
-            defer file.Close()
+		// Fotoğrafı işle
+		var imagePath string
+		newFilename := "" // newFilename değişkenini burada tanımla
 
-            ext := filepath.Ext(handler.Filename)
-            if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
-                utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
-                return
-            }
+		file, handler, err := r.FormFile("image")
+		if err != nil && err != http.ErrMissingFile {
+			utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
+			return
+		}
 
-            // Benzersiz dosya adı oluştur
-            imageUUID := uuid.New().String()
-            imagePath = fmt.Sprintf("/uploads/%s%s", imageUUID, ext)
+		if file != nil { // Dosya varsa işle
+			defer file.Close()
 
-            // Fotoğrafı kaydet
-            if err := saveImage(file, imagePath); err != nil {
-                utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
-                return
-            }
-        }
+			// Dosya uzantısını kontrol et
+			ext := filepath.Ext(handler.Filename)
+			allowedExtensions := map[string]bool{
+				".jpg":  true,
+				".jpeg": true,
+				".png":  true,
+				".gif":  true,
+			}
+			if !allowedExtensions[ext] {
+				utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
+				return
+			}
 
-        categoriesData, err := json.Marshal(categories)
-        if err != nil {
-            utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-            return
-        }
+			// Benzersiz dosya adı oluştur ve newFilename'e ata
+			imageUUID := uuid.New().String()
+			newFilename = imageUUID + ext
 
-        _, err = datahandlers.DB.Exec("INSERT INTO posts (user_id, title, content, categories, created_at, image_path) VALUES (?, ?, ?, ?, ?, ?)",
-            session.UserID, title, content, string(categoriesData), time.Now(), imagePath)
-        if err != nil {
-            utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-            return
-        }
+			// uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
+			uploadsDir := "./uploads"
+			if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+				os.Mkdir(uploadsDir, 0755) // Klasörü oluştur
+			}
 
-        http.Redirect(w, r, "/", http.StatusSeeOther)
-        return
-    }
+			// Kaydedilecek dosyanın tam yolunu oluştur
+			imagePath = filepath.Join(uploadsDir, newFilename)
 
-    tmpl, err := template.ParseFiles("templates/createPost.html")
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    err = tmpl.Execute(w, nil)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-    }
+			// Fotoğrafı kaydet
+			if err := saveImage(file, imagePath); err != nil {
+				utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		categoriesData, err := json.Marshal(categories)
+		if err != nil {
+			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// Veritabanına kaydet (imagePath ile birlikte)
+		_, err = datahandlers.DB.Exec("INSERT INTO posts (user_id, title, content, categories, created_at, image_path) VALUES (?, ?, ?, ?, ?, ?)",
+			session.UserID, title, content, string(categoriesData), time.Now(), newFilename) // newFilename'i kullan
+		if err != nil {
+			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/createPost.html")
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 // Fotoğrafı kaydet
-func saveImage(file io.Reader, imagePath string) error {
-    // uploads klasörünün var olup olmadığını kontrol et, yoksa oluştur
-    uploadsDir := "./uploads"
-    if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
-        os.Mkdir(uploadsDir, 0755) // Klasörü oluştur
-    }
+func saveImage(file multipart.File, imagePath string) error {
+	// Dosyayı aç
+	dst, err := os.Create(imagePath)
+	if err != nil {
+		return fmt.Errorf("dosya oluşturulamadı: %w", err)
+	}
+	defer dst.Close()
 
-    // Dosyayı aç
-    dst, err := os.Create("." + imagePath)
-    if err != nil {
-        return fmt.Errorf("dosya oluşturulamadı: %w", err)
-    }
-    defer dst.Close()
+	// Gelen veriyi dosyaya kopyala
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		return fmt.Errorf("dosya kopyalanamadı: %w", err)
+	}
 
-    // Gelen veriyi dosyaya kopyala
-    _, err = io.Copy(dst, file)
-    if err != nil {
-        return fmt.Errorf("dosya kopyalanamadı: %w", err)
-    }
-
-    return nil
+	return nil
 }
+
 // Bir gönderiye yeni bir yorum eklemek için kullanılan HTTP işleyicisidir.
 func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := datahandlers.GetSession(r)
@@ -147,6 +166,7 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
+	
 
 	if r.Method == http.MethodPost {
 		postID := r.FormValue("post_id")
@@ -350,24 +370,24 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := datahandlers.GetSession(r)
 
 	if r.Method != http.MethodGet {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-    postIDStr := r.URL.Query().Get("id")
-    if postIDStr == "" {
-        http.Error(w, "Post ID required", http.StatusBadRequest)
-        return
-    }
+	postIDStr := r.URL.Query().Get("id")
+	if postIDStr == "" {
+		http.Error(w, "Post ID required", http.StatusBadRequest)
+		return
+	}
 
-    postID, err := strconv.Atoi(postIDStr)
-    if err != nil {
-        http.Error(w, "Invalid post ID", http.StatusBadRequest)
-        return
-    }
+	postID, err := strconv.Atoi(postIDStr)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
 
 	var post Post
-    var categoriesJSON string
+	var categoriesJSON string
 	err = datahandlers.DB.QueryRow(`SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username, posts.image_path, 
     COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
     COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count
@@ -377,16 +397,15 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
     WHERE posts.id = ? AND posts.deleted = 0
     GROUP BY posts.id`, postID).Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.ImagePath, &post.LikeCount, &post.DislikeCount)
 
-    if err != nil {
-        if err == sql.ErrNoRows {
-            http.Error(w, "Post not found", http.StatusNotFound)
-        } else {
-            log.Println("Error querying post:", err)
-            http.Error(w, "Internal server error", http.StatusInternalServerError)
-        }
-        return
-    }
-
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Post not found", http.StatusNotFound)
+		} else {
+			log.Println("Error querying post:", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
 
 	var categories []string
 	err = json.Unmarshal([]byte(categoriesJSON), &categories)
@@ -408,49 +427,49 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
         WHERE c.post_id = ? AND c.deleted = 0
         GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, u.username
         ORDER BY c.created_at DESC`, postID)
-    if err != nil {
-        log.Println("Error querying comments:", err)
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    defer rows.Close()
+	if err != nil {
+		log.Println("Error querying comments:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
 
-    var comments []Comment
-    for rows.Next() {
-        var comment Comment
-        if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.Username, &comment.LikeCount, &comment.DislikeCount); err != nil {
-            log.Println("Error scanning comment:", err)
-            http.Error(w, "Internal server error", http.StatusInternalServerError)
-            return
-        }
-        comment.CreatedAtFormatted = comment.CreatedAt.Format("2006-01-02 15:04")
-        comments = append(comments, comment)
-    }
-    if err := rows.Err(); err != nil {
-        log.Println("Rows error:", err)
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	var comments []Comment
+	for rows.Next() {
+		var comment Comment
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.Username, &comment.LikeCount, &comment.DislikeCount); err != nil {
+			log.Println("Error scanning comment:", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		comment.CreatedAtFormatted = comment.CreatedAt.Format("2006-01-02 15:04")
+		comments = append(comments, comment)
+	}
+	if err := rows.Err(); err != nil {
+		log.Println("Rows error:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    data := struct {
-        Post      Post
-        Comments  []Comment
-        LoggedIn  bool
-    }{
-        Post:      post,
-        Comments:  comments,
-        LoggedIn:  session != nil,
-    }
+	data := struct {
+		Post     Post
+		Comments []Comment
+		LoggedIn bool
+	}{
+		Post:     post,
+		Comments: comments,
+		LoggedIn: session != nil,
+	}
 
-    tmpl, err := template.ParseFiles("templates/viewPost.html")
-    if err != nil {
-        log.Println("Error parsing template:", err)
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        log.Println("Error executing template:", err)
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-    }
+	tmpl, err := template.ParseFiles("templates/viewPost.html")
+	if err != nil {
+		log.Println("Error parsing template:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		log.Println("Error executing template:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }

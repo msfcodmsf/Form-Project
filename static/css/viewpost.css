@@ -326,6 +326,50 @@ textarea {
   resize: none;
 }
 
+#imagedüzen {
+  width: 50%; /* Fotoğrafın genişliği kapsayıcı elemanın genişliğine uyacak */
+  height: 50%; /* Fotoğrafın yüksekliği otomatik olarak ayarlanacak */
+  margin-bottom: 10px; /* Fotoğraf ile içerik arasında boşluk */
+  border: none; /* Fotoğrafın etrafındaki çerçeveyi kaldır */
+  border-radius: 10px;
+}
+
+/* Modal (Büyütülmüş Fotoğraf) Stilleri */
+.modal {
+  display: none; 
+  position: fixed; 
+  z-index: 1; 
+  left: 0;
+  top: 0;
+  width: 100%; 
+  height: 100%; 
+  overflow: auto; 
+  background-color: rgba(0, 0, 0, 0.9); 
+}
+
+.modal-content {
+  display: block;
+  width: 100%; 
+  height: 100%;
+}
+
+.close-button {
+  color: white;
+  position: absolute;
+  top: 10px;
+  right: 25px;
+  font-size: 35px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: #999;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+
 
 @media (max-width: 1600px) {
 
