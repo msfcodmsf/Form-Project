@@ -1,3 +1,4 @@
+// datahandlers
 package datahandlers
 
 import (
@@ -76,8 +77,8 @@ func CreateTables() {
 	VoteTables(DB)
 	CommentTables(DB)
 
-   // Posts tablosunu oluştur (image_path sütunu ile)
-   _, err := DB.Exec(`
+	// Posts tablosunu oluştur (image_path sütunu ile)
+	_, err := DB.Exec(`
    CREATE TABLE IF NOT EXISTS posts (
 	   id INTEGER PRIMARY KEY AUTOINCREMENT,
 	   user_id INTEGER,
@@ -88,12 +89,12 @@ func CreateTables() {
 	   image_path TEXT -- Fotoğraf yolu sütunu
    );
 `)
-if err != nil {
-   log.Fatal("Error creating posts table:", err)
-}
-if err != nil {
-	log.Fatal("Error adding profile_picture_path column to users table:", err)
-}
+	if err != nil {
+		log.Fatal("Error creating posts table:", err)
+	}
+	if err != nil {
+		log.Fatal("Error adding profile_picture_path column to users table:", err)
+	}
 }
 
 func SessionTables(db *sql.DB) {
@@ -136,11 +137,12 @@ func PostTables(db *sql.DB) {
 func UsersTables(db *sql.DB) {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        );`,
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT UNIQUE NOT NULL,
+			username TEXT UNIQUE NOT NULL,
+			password TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'member' -- Yeni role sütunu (varsayılan: member)
+		);`,
 	}
 	for _, query := range queries {
 		_, err := db.Exec(query)

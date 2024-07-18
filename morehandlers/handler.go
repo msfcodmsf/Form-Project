@@ -1,3 +1,4 @@
+// morehandlers
 package morehandlers // Kullanıcı profili ve ilgili işlemleri yöneten paket
 
 import (
@@ -16,82 +17,85 @@ import (
 	"time"    // Zaman ve tarih işlemleri için
 
 	"github.com/google/uuid"
+    
 )
 
 // Post yapısı, bir gönderinin verilerini temsil eder.
 type Post struct {
-    ID                int       // Gönderi ID'si
-    UserID            int       // Gönderi sahibi kullanıcı ID'si
-    Title             string    // Gönderi başlığı
-    Content           string    // Gönderi içeriği
-    Categories        []string  // Gönderi kategorileri (JSON olarak saklanır)
-    CategoriesFormatted string // Gönderi kategorileri (virgülle ayrılmış, görüntüleme amaçlı)
-    CreatedAt         time.Time // Gönderi oluşturulma tarihi
-    CreatedAtFormatted string   // Gönderi oluşturulma tarihi (formatlı)
-    LikeCount         int       // Gönderi beğeni sayısı
-    DislikeCount      int       // Gönderi beğenmeme sayısı
-    Username          string    // Gönderi sahibi kullanıcı adı
-    CommentCount      int       // Gönderiye yapılan yorum sayısı
+	ID                  int       // Gönderi ID'si
+	UserID              int       // Gönderi sahibi kullanıcı ID'si
+	Title               string    // Gönderi başlığı
+	Content             string    // Gönderi içeriği
+	Categories          []string  // Gönderi kategorileri (JSON olarak saklanır)
+	CategoriesFormatted string    // Gönderi kategorileri (virgülle ayrılmış, görüntüleme amaçlı)
+	CreatedAt           time.Time // Gönderi oluşturulma tarihi
+	CreatedAtFormatted  string    // Gönderi oluşturulma tarihi (formatlı)
+	LikeCount           int       // Gönderi beğeni sayısı
+	DislikeCount        int       // Gönderi beğenmeme sayısı
+	Username            string    // Gönderi sahibi kullanıcı adı
+	CommentCount        int       // Gönderiye yapılan yorum sayısı
 }
 
 // User yapısı, bir kullanıcıyı temsil eder.
 type User struct {
-    ID                int            `validate:"-"`
-    Email             string         `validate:"required,email"`
-    Username          sql.NullString // Google kayıtta bazen boş olabilir
-    Password          sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
-    ProfilePicturePath sql.NullString // Profil fotoğrafının yolu
+	ID                 int            `validate:"-"`
+	Email              string         `validate:"required,email"`
+	Username           sql.NullString // Google kayıtta bazen boş olabilir
+	Password           sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
+	ProfilePicturePath sql.NullString // Profil fotoğrafının yolu
+	Role               string         // Kullanıcının rolü (admin, moderator, member)
 }
 
-//  kullanıcının profil sayfasını oluşturur ve görüntüler.
+// kullanıcının profil sayfasını oluşturur ve görüntüler.
 func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
-    session, err := datahandlers.GetSession(r)
-    if err != nil || session == nil {
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-    user, err := getUserByID(session.UserID)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	user, err := GetUserByID(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    ownPosts, err := getOwnPosts(session.UserID)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	ownPosts, err := getOwnPosts(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    likedPosts, err := getLikedPosts(session.UserID)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	likedPosts, err := getLikedPosts(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    tmpl, err := template.ParseFiles("templates/myprofil.html")
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	tmpl, err := template.ParseFiles("templates/myprofil.html")
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    data := struct {
-        User        *User
-        OwnPosts    []Post
-        LikedPosts  []Post
-    }{
-        User:        user,
-        OwnPosts:    ownPosts,
-        LikedPosts:  likedPosts,
-    }
+	data := struct {
+		User       *User
+		OwnPosts   []Post
+		LikedPosts []Post
+	}{
+		User:       user,
+		OwnPosts:   ownPosts,
+		LikedPosts: likedPosts,
+	}
 
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
-//  Belirtilen kullanıcı ID'sine ait gönderileri veritabanından çeker.
+
+// Belirtilen kullanıcı ID'sine ait gönderileri veritabanından çeker.
 func getOwnPosts(userID int) ([]Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -168,86 +172,86 @@ func getLikedPosts(userID int) ([]Post, error) {
 }
 
 // Belirtilen kullanıcı ID'sine sahip kullanıcıyı veritabanından çeker.
-func getUserByID(userID int) (*User, error) {
-    var user User
-    query := "SELECT id, email, username, password, profile_picture_path FROM users WHERE id = ?"
-    err := datahandlers.DB.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password, &user.ProfilePicturePath)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, fmt.Errorf("user with ID %d not found", userID)
-        }
-        return nil, err
-    }
-    return &user, nil
+func GetUserByID(userID int) (*User, error) {
+	var user User
+	query := "SELECT id, email, username, password, profile_picture_path, role FROM users WHERE id = ?"
+	err := datahandlers.DB.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password, &user.ProfilePicturePath, &user.Role) // role bilgisini de al
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user with ID %d not found", userID)
+		}
+		return nil, err
+	}
+	return &user, nil
 }
 
 const maxUploadSize = 20 * 1024 * 1024 // 20 MB
 func UploadProfilePictureHandler(w http.ResponseWriter, r *http.Request) {
-    session, err := datahandlers.GetSession(r)
-    if err != nil || session == nil {
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-    if r.Method != http.MethodPost {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-    file, handler, err := r.FormFile("profilePicture")
-    if err != nil {
-        utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+	file, handler, err := r.FormFile("profilePicture")
+	if err != nil {
+		utils.HandleErr(w, err, "Error getting image", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
-    // Dosya boyutunu kontrol et
-    if handler.Size > maxUploadSize {
-        utils.HandleErr(w, fmt.Errorf("file size exceeds limit"), "File size exceeds limit (20MB)", http.StatusBadRequest)
-        return
-    }
+	// Dosya boyutunu kontrol et
+	if handler.Size > maxUploadSize {
+		utils.HandleErr(w, fmt.Errorf("file size exceeds limit"), "File size exceeds limit (20MB)", http.StatusBadRequest)
+		return
+	}
 
-    // Dosya uzantısını kontrol et
-    ext := filepath.Ext(handler.Filename)
-    allowedExtensions := map[string]bool{
-        ".jpg":  true,
-        ".jpeg": true,
-        ".png":  true,
-        ".gif":  true,
-    }
-    if !allowedExtensions[ext] {
-        utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
-        return
-    }
+	// Dosya uzantısını kontrol et
+	ext := filepath.Ext(handler.Filename)
+	allowedExtensions := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".gif":  true,
+	}
+	if !allowedExtensions[ext] {
+		utils.HandleErr(w, fmt.Errorf("unsupported image format: %s", ext), "Unsupported image format", http.StatusBadRequest)
+		return
+	}
 
-    // Benzersiz dosya adı oluştur
-    imageUUID := uuid.New().String()
-    newFilename := imageUUID + ext
+	// Benzersiz dosya adı oluştur
+	imageUUID := uuid.New().String()
+	newFilename := imageUUID + ext
 
-    // uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
-    uploadsDir := "./uploads"
-    if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
-        os.Mkdir(uploadsDir, 0755)
-    }
+	// uploads dizininin var olup olmadığını kontrol et, yoksa oluştur
+	uploadsDir := "./uploads"
+	if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+		os.Mkdir(uploadsDir, 0755)
+	}
 
-    // Kaydedilecek dosyanın tam yolunu oluştur
-    imagePath := filepath.Join(uploadsDir, newFilename)
+	// Kaydedilecek dosyanın tam yolunu oluştur
+	imagePath := filepath.Join(uploadsDir, newFilename)
 
-    // Fotoğrafı kaydet
-    if err := saveImage(file, imagePath); err != nil {
-        utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
-        return
-    }
+	// Fotoğrafı kaydet
+	if err := saveImage(file, imagePath); err != nil {
+		utils.HandleErr(w, err, "Error saving image", http.StatusInternalServerError)
+		return
+	}
 
-    // Veritabanındaki profile_picture_path alanını güncelle
-    _, err = datahandlers.DB.Exec("UPDATE users SET profile_picture_path = ? WHERE id = ?", newFilename, session.UserID)
-    if err != nil {
-        utils.HandleErr(w, err, "Error updating profile picture path", http.StatusInternalServerError)
-        return
-    }
+	// Veritabanındaki profile_picture_path alanını güncelle
+	_, err = datahandlers.DB.Exec("UPDATE users SET profile_picture_path = ? WHERE id = ?", newFilename, session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Error updating profile picture path", http.StatusInternalServerError)
+		return
+	}
 
-    // Yüklenen dosyanın adını geri döndür
-    fmt.Fprint(w, newFilename)
+	// Yüklenen dosyanın adını geri döndür
+	fmt.Fprint(w, newFilename)
 }
 
 func saveImage(file multipart.File, imagePath string) error {

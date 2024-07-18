@@ -1,3 +1,4 @@
+// homehandl
 package homehandlers
 
 import (
@@ -6,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"form-project/datahandlers"
+	"form-project/morehandlers"
 	"form-project/utils"
 	"io"
 	"log"
@@ -91,7 +93,7 @@ var oauthStateStringGoogle string // Google OAuth durumu için
 // Paket yüklenirken otomatik olarak çalışır.
 func init() {
 	loadConfig()
-	 // Google OAuth 2.0 yapılandırması oluşturulur.
+	// Google OAuth 2.0 yapılandırması oluşturulur.
 	googleOauthConfig = &oauth2.Config{
 		RedirectURL:  "http://localhost:8065/google/callback",
 		ClientID:     config.GoogleClientID,
@@ -271,24 +273,24 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-    switch r.Method {
-    case http.MethodPost:
-        err := registerUser(w, r)
-        if err != nil {
-            // ... (handle other errors)
+	switch r.Method {
+	case http.MethodPost:
+		err := registerUser(w, r)
+		if err != nil {
+			// ... (handle other errors)
 
-            // Pass specific error message to the template
-            if err.Error() == "user already exists" {
-                errorMessages["Email"] = "Bu Email zaten kayıtlı."
-            } else if err.Error() == "username already exists" {
-                errorMessages["Username"] = "Bu kullanıcı adı zaten alınmış."
-            } else {
-                errorMessages["Email"] = err.Error() // Generic error message
-            }
+			// Pass specific error message to the template
+			if err.Error() == "user already exists" {
+				errorMessages["Email"] = "Bu Email zaten kayıtlı."
+			} else if err.Error() == "username already exists" {
+				errorMessages["Username"] = "Bu kullanıcı adı zaten alınmış."
+			} else {
+				errorMessages["Email"] = err.Error() // Generic error message
+			}
 
-            renderRegisterTemplate(w, RegisterTemplateData{ErrorMessages: errorMessages})
-            return
-        }
+			renderRegisterTemplate(w, RegisterTemplateData{ErrorMessages: errorMessages})
+			return
+		}
 	default: // GET request
 		tmpl, err := template.ParseFiles("templates/register.html")
 		if err != nil {
@@ -321,10 +323,9 @@ func registerUser(w http.ResponseWriter, r *http.Request) error {
 	var existingUserID int
 	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&existingUserID)
 	existingUser, _ := getUserByEmail(email)
-    if existingUser != nil {
-        return fmt.Errorf("user already exists") 
-    }
-
+	if existingUser != nil {
+		return fmt.Errorf("user already exists")
+	}
 
 	var user User
 	if googleOAuth == "true" {
@@ -452,16 +453,16 @@ func getGoogleUserByEmail(email string) (int64, error) {
 
 // Kayıt formunu göstermek için HTML şablonunu render eder.
 func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
-    tmpl, err := template.ParseFiles("templates/register.html")
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	tmpl, err := template.ParseFiles("templates/register.html")
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-    }
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 // Kullanıcı oturum açma işlemini işler.
@@ -849,7 +850,6 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
@@ -993,47 +993,58 @@ func getEmailAndNameFromFacebook(token *oauth2.Token) (string, string, error) {
 const maxUploadSize = 20 * 1024 * 1024 // 20 MB
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != "POST" {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-    r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-    if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-        http.Error(w, "The uploaded file is too big. Please choose an file that's less than 20MB in size", http.StatusBadRequest)
-        return
-    }
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, "The uploaded file is too big. Please choose an file that's less than 20MB in size", http.StatusBadRequest)
+		return
+	}
 
-    file, handler, err := r.FormFile("file")
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
-    // Dosya tipi kontrolü
-    allowedExtensions := map[string]bool{
-        ".jpg":  true,
-        ".jpeg": true,
-        ".png":  true,
-        ".gif":  true,
-    }
-    ext := filepath.Ext(handler.Filename)
-    if !allowedExtensions[ext] {
-        http.Error(w, "The provided file format is not allowed. Please upload a JPEG, PNG, or GIF image", http.StatusBadRequest)
-        return
-    }
+	// Dosya tipi kontrolü
+	allowedExtensions := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".gif":  true,
+	}
+	ext := filepath.Ext(handler.Filename)
+	if !allowedExtensions[ext] {
+		http.Error(w, "The provided file format is not allowed. Please upload a JPEG, PNG, or GIF image", http.StatusBadRequest)
+		return
+	}
 
-    // Dosyayı kaydet
-    f, err := os.OpenFile("./uploads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-    if err != nil {
-        http.Error(w, "Internal Server Error: Dosya kaydedilemedi.", http.StatusInternalServerError)
-        log.Println("Error saving file:", err) // Loglara hata mesajını yaz
-        return
-    }
-    defer f.Close()
-    io.Copy(f, file)
+	// Dosyayı kaydet
+	f, err := os.OpenFile("./uploads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		http.Error(w, "Internal Server Error: Dosya kaydedilemedi.", http.StatusInternalServerError)
+		log.Println("Error saving file:", err) // Loglara hata mesajını yaz
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
 
-    fmt.Fprintf(w, "File uploaded successfully: %s", handler.Filename)
+	fmt.Fprintf(w, "File uploaded successfully: %s", handler.Filename)
 }
 
+func isAdmin(r *http.Request) bool {
+	session, _ := datahandlers.GetSession(r)
+	if session != nil {
+		user, err := morehandlers.GetUserByID(session.UserID)
+		if err != nil {
+			return false
+		}
+		return user.Role == "admin"
+	}
+	return false
+}

@@ -15,6 +15,7 @@
     <div id="bigbar">
         <div id="düzenbar">
             <div id="bar">
+                <button id="adminButton" style="display:none;">Admin Paneli</button> 
                 <!-- Logo -->
                 <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain;"></a>               
                 <input type="text" id="searchBox" placeholder="search now" onkeyup="searchPosts()">
@@ -312,6 +313,20 @@
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
     }
+</script>
+
+<script>
+    // Oturum bilgilerini kontrol et (örneğin, localStorage veya çerezden)
+const isAdmin = checkIfAdmin(); // Bu fonksiyonu kendiniz yazmalısınız.
+
+if (isAdmin) {
+    document.getElementById("adminButton").style.display = "block";
+}
+
+document.getElementById("adminButton").addEventListener("click", function() {
+    window.location.href = "/admin.html"; 
+});
+
 </script>
 
 </body>

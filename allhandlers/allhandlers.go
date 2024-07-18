@@ -1,3 +1,4 @@
+// allhandlers
 package allhandlers // Bu paket, tüm HTTP istek işleyicilerini (handler) merkezi bir yerde toplar.
 
 import (  // Gerekli paketler import edilir.
@@ -51,4 +52,6 @@ func Allhandlers() { // Bu fonksiyon, tüm istek işleyicilerini kaydeder.
 
     // Profil İşlemleri:
     http.HandleFunc("/myprofil", morehandlers.MyProfileHandler)           // Kullanıcının profilini görüntüleme işlemi için işleyici.
+
+    http.HandleFunc("/admin", morehandlers.MyProfileHandler) 
 }

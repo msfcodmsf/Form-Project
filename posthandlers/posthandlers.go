@@ -1,3 +1,4 @@
+// posthandlers
 package posthandlers
 
 import (
@@ -45,10 +46,10 @@ type Comment struct {
 	LikeCount          int
 	DislikeCount       int
 	Username           string // Kullanıcı adı
-	ImagePath          string // Add this line to include ImagePath
+	ImagePath          string 
 }
 
-const maxUploadSize = 20 * 1024 * 1024 // 20 MB
+const maxUploadSize = 20 * 1024 * 1024 // 20 MB ile sınırlama
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
     session, err := datahandlers.GetSession(r)
@@ -91,6 +92,9 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
             }
 
             // Dosya uzantısını kontrol et
+
+
+			
             ext := filepath.Ext(handler.Filename)
             allowedExtensions := map[string]bool{
                 ".jpg":  true,
