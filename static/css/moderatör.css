@@ -1,0 +1,74 @@
+/* Sayfaya genel stil */
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f4; /* Arka plan rengini hafifçe değiştir */
+    color: #333;                /* Metin rengini koyulaştır */
+    padding: 20px;              /* Sayfa etrafına boşluk ekle */
+}
+
+h1, h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#notifications {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    max-width: 960px;      /* Maksimum genişlik belirle */
+    margin: 0 auto;         /* Sayfayı ortala */
+}
+
+.notification {
+    background-color: #fff; /* Bildirim arka planını beyaz yap */
+    border: 1px solid #ddd; 
+    padding: 20px;
+    border-radius: 8px;    /* Daha yumuşak köşeler */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Hafif gölge ekle */
+}
+
+/* Onayla ve Reddet butonları */
+button {
+    background-color: #4CAF50; /* Yeşil onay butonu */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 5px;       /* Butonlar arasına boşluk */
+    transition: background-color 0.3s; /* Renk geçişi ekle */
+}
+
+button[type="submit"][name="reddet"] { /* Reddet butonu için özel stil */
+    background-color: #f44336; /* Kırmızı reddet butonu */
+}
+
+button:hover {
+    opacity: 0.8; /* Butonlara hover efekti ekle */
+}
+
+/* Ana Sayfaya Dön butonu */
+.back-to-home {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.back-to-home a {
+    background-color: #007BFF; /* Mavi renk */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.back-to-home a:hover {
+    background-color: #0056b3; /* Hover efekti için daha koyu mavi */
+}
+
+/* Diğer stiller */
+p {
+    line-height: 1.6;
+    margin-bottom: 10px;
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderatör Paneli</title>
+    <link rel="stylesheet" href="/static/css/moderatör.css">  
+</head>
+<body>
+    <h1>Moderatör Paneli</h1>
+
+    <h2>Bildirimler</h2>
+    <div id="notifications">
+        {{range .PostsToModerate}}
+            <div class="notification">
+                <h3>{{.Title}}</h3>
+                <p>Gönderen: {{.Username}}</p>
+                <p>Kategori: {{.CategoriesFormatted}}</p>
+                <p>İçerik: {{.Content}}</p>
+                <form action="/onayla" method="POST">
+                    <input type="hidden" name="post_id" value="{{.ID}}">
+                    <button type="submit">Onayla</button>
+                </form>
+                <form action="/reddet" method="POST">
+                    <input type="hidden" name="post_id" value="{{.ID}}">
+                    <button type="submit">Reddet</button>
+                </form>
+            </div>
+        {{else}}
+            <p>Onay bekleyen gönderi yok.</p>
+        {{end}}
+    </div>
+
+    <div class="back-to-home">
+        <a href="/">Ana Sayfaya Dön</a>
+    </div>
+
+    <script src="/static/js/moderator.js"></script>
+</body>
+</html>

@@ -15,9 +15,9 @@
     <div id="bigbar">
         <div id="düzenbar">
             <div id="bar">
-                <button id="adminButton" style="display:none;">Admin Paneli</button> 
                 <!-- Logo -->
-                <a href="index.html" id="logo" style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain;"></a>               
+                <a href="index.html" id="logo"
+                    style="background-image: url('/static/png/logo.png'); background-repeat: no-repeat; background-size: contain;"></a>
                 <input type="text" id="searchBox" placeholder="search now" onkeyup="searchPosts()">
                 <div id="darkmod">
                     <!-- Tema değiştirme düğmesi -->
@@ -25,7 +25,7 @@
                         <a role="button" id="themeToggle" title="Tema Değiştir" href="javascript:void(0);">🌓
                             <i id="themeIcon" class="fas fa-sun"></i></a>
                     </span>
-                </div>  
+                </div>
                 <div id="girişbar">
                     <nav>
                         <!-- Giriş durumuna göre menü -->
@@ -34,6 +34,13 @@
                             <a href="/myprofil"><img width="80%" height="100%" src="/static/png/pp.png"></a>
                         </div>
                         <a href="/logout" id="logoutButton" class="button">Log Out</a>
+                        {{if .IsAdmin}}
+                        <button id="adminButton">Admin Paneli</button>
+                        {{end}}
+                        {{if .IsModerator}}
+                        <a href="/moderatör" id="moderatorButton" class="button">Moderator Paneli</a>
+                        {{end}}
+
                         <!-- Hoş geldiniz popup'ı -->
                         <script>
                             // Eğer popup daha önce gösterilmemişse göster
@@ -86,6 +93,16 @@
                             });
                         </script>
 
+                        {{if .LoggedIn}}
+                        <div id="bildirimPopup" class="popup" style="display:none;">
+                            <div class="popup-content">
+                                <span class="close-btn" onclick="kapatPopup()">&times;</span>
+                                <p>Gönderiniz moderasyon için gönderildi. Onaylandıktan sonra yayınlanacaktır.</p>
+                            </div>
+                        </div>
+                        {{end}}
+
+
                         {{else}}
                         <a href="/login" class="button">Log In</a>
                         <a href="/register" class="button">Register</a>
@@ -105,46 +122,14 @@
             {{else}}
             Create a new post
             {{end}}
-        </a>
-        <div id="categoryFilter" onchange="filterByCategory()">
-            <div id="categoryFilter">
-                <div id="leftkatagoricont" data-category="Veri Tabanı">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/database.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Database</div>
-                </div>
-                <div id="leftkatagoricont" data-category="Programlama">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/coding.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Programming</div>
-                </div>
-
-                <div id="leftkatagoricont" data-category="Yapay Zeka">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/artificial-intelligence.png" width="90%"
-                            height="50%"></div>
-                    <div id="leftkatagoricontyazı">Artificial Intelligence</div>
-                </div>
-
-                <div id="leftkatagoricont" data-category="Oyun Motorları">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/ghost.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Game Engines</div>
-                </div>
-
-                <div id="leftkatagoricont" data-category="Robotik Sistemler">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/robot.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">Robotic Systems</div>
-                </div>
-
-                <div id="leftkatagoricont" data-category="React Native">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/structure.png" width="90%" height="50%"></div>
-                    <div id="leftkatagoricontyazı">React Native</div>
-                </div>
-
-                <div id="leftkatagoricont" data-category="Cyber Security">
-                    <div id="leftkatagoricontfoto"><img src="/static/png/cyber-criminal.png" width="90%" height="50%">
+        </a> 
+                <div id="categoryFilter" onchange="filterByCategory()">
+                    <div id="categoryFilter">
+                        {{range .Categories}} 
+                            <div id="leftkatagoricont" data-category="{{.}}"><div id="leftkatagoricontfoto"><img src="/static/png/logo.png" width="90%" height="50%"></div> <div id="leftkatagoricontyazı">{{.}}</div> </div>
+                        {{end}}
                     </div>
-                    <div id="leftkatagoricontyazı">Cyber Security</div>
                 </div>
-            </div>
-            <!-- Diğer kategoriler buraya eklenebilir -->
         </div>
         <!-- Kategori listesi -->
         <script>
@@ -287,48 +272,40 @@
         }
     </script>
 
-<script>
-    // JavaScript to check for the error cookie and display the alert
-    window.onload = function() {
-        const deleteErrorCookie = getCookie("delete_error");
-        if (deleteErrorCookie) {
-            const errorPopup = document.createElement('div');
-            errorPopup.id = "errorPopup";
-            errorPopup.textContent = deleteErrorCookie;
+    <script>
+        // JavaScript to check for the error cookie and display the alert
+        window.onload = function () {
+            const deleteErrorCookie = getCookie("delete_error");
+            if (deleteErrorCookie) {
+                const errorPopup = document.createElement('div');
+                errorPopup.id = "errorPopup";
+                errorPopup.textContent = deleteErrorCookie;
 
-            document.body.appendChild(errorPopup);
+                document.body.appendChild(errorPopup);
 
-            setTimeout(() => {
-                errorPopup.remove();
-            }, 3000);
+                setTimeout(() => {
+                    errorPopup.remove();
+                }, 3000);
 
-            // Clear the cookie after displaying the alert
-            document.cookie = "delete_error=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                // Clear the cookie after displaying the alert
+                document.cookie = "delete_error=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            }
         }
-    }
 
-    // Helper function to get a cookie by name
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-</script>
+        // Helper function to get a cookie by name
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+    </script>
 
-<script>
-    // Oturum bilgilerini kontrol et (örneğin, localStorage veya çerezden)
-const isAdmin = checkIfAdmin(); // Bu fonksiyonu kendiniz yazmalısınız.
 
-if (isAdmin) {
-    document.getElementById("adminButton").style.display = "block";
-}
-
-document.getElementById("adminButton").addEventListener("click", function() {
-    window.location.href = "/admin.html"; 
-});
-
-</script>
-
+    <script>
+        document.getElementById("adminButton").addEventListener("click", function () {
+            window.location.href = "/admin";
+        });
+    </script>
 </body>
 
 </html>

@@ -131,7 +131,26 @@
                 </div>
                 <!-- Gönderi oluşturulma tarihi --><!-- Beğeni ve beğenmeme sayıları -->
                 <p>{{.Post.CreatedAtFormatted}} Likes: <span id="post-like-count">{{.Post.LikeCount}}</span> Dislikes: <span id="post-dislike-count">{{.Post.DislikeCount}}</span></p>
-                
+                {{if .LoggedIn}} 
+                {{if .IsModerator}}
+                    <form action="/report-post" method="POST" id="reportPostForm">
+                        <input type="hidden" name="post_id" value="{{.Post.ID}}">
+                        <button type="button" id="reportButton">Raporla</button> 
+                    </form>
+            
+                    <script>
+                        document.getElementById("reportButton").addEventListener("click", function() {
+                            // Onay al
+                            if (confirm("Bu gönderiyi rapor etmek istediğinize emin misiniz?")) {
+                                document.getElementById("reportPostForm").submit();
+                            }
+                        });
+                    </script>
+                {{end}}
+            {{end}}
+            
+            
+            
                 <!-- Beğeni ve beğenmeme düğmeleri -->
                 <div id="like">
                     <button onclick="vote('{{.Post.ID}}', null, 1)"><img src="/static/png/like.png" alt="Like"></button>

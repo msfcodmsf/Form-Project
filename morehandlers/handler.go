@@ -6,45 +6,23 @@ import (
 	"encoding/json"             // JSON verilerini işlemek için
 	"fmt"                       // Formatlama ve çıktı işlemleri için
 	"form-project/datahandlers" // Veritabanı bağlantısı ve oturum yönetimi için
-	"form-project/utils"        // Hata yönetimi gibi yardımcı fonksiyonlar için
-	"html/template"             // HTML şablonlarını işlemek için
+	"form-project/models"
+	"form-project/utils" // Hata yönetimi gibi yardımcı fonksiyonlar için
+	"html/template"      // HTML şablonlarını işlemek için
 	"io"
 	"mime/multipart"
 	"net/http" // HTTP isteklerini ve yanıtlarını yönetmek için
 	"os"
 	"path/filepath"
 	"strings" // String (metin) işlemleri için
-	"time"    // Zaman ve tarih işlemleri için
 
+	// Zaman ve tarih işlemleri için
 	"github.com/google/uuid"
-    
 )
 
 // Post yapısı, bir gönderinin verilerini temsil eder.
-type Post struct {
-	ID                  int       // Gönderi ID'si
-	UserID              int       // Gönderi sahibi kullanıcı ID'si
-	Title               string    // Gönderi başlığı
-	Content             string    // Gönderi içeriği
-	Categories          []string  // Gönderi kategorileri (JSON olarak saklanır)
-	CategoriesFormatted string    // Gönderi kategorileri (virgülle ayrılmış, görüntüleme amaçlı)
-	CreatedAt           time.Time // Gönderi oluşturulma tarihi
-	CreatedAtFormatted  string    // Gönderi oluşturulma tarihi (formatlı)
-	LikeCount           int       // Gönderi beğeni sayısı
-	DislikeCount        int       // Gönderi beğenmeme sayısı
-	Username            string    // Gönderi sahibi kullanıcı adı
-	CommentCount        int       // Gönderiye yapılan yorum sayısı
-}
 
 // User yapısı, bir kullanıcıyı temsil eder.
-type User struct {
-	ID                 int            `validate:"-"`
-	Email              string         `validate:"required,email"`
-	Username           sql.NullString // Google kayıtta bazen boş olabilir
-	Password           sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
-	ProfilePicturePath sql.NullString // Profil fotoğrafının yolu
-	Role               string         // Kullanıcının rolü (admin, moderator, member)
-}
 
 // kullanıcının profil sayfasını oluşturur ve görüntüler.
 func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,9 +57,9 @@ func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		User       *User
-		OwnPosts   []Post
-		LikedPosts []Post
+		User       *models.User
+		OwnPosts   []models.Post
+		LikedPosts []models.Post
 	}{
 		User:       user,
 		OwnPosts:   ownPosts,
@@ -96,7 +74,7 @@ func MyProfileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Belirtilen kullanıcı ID'sine ait gönderileri veritabanından çeker.
-func getOwnPosts(userID int) ([]Post, error) {
+func getOwnPosts(userID int) ([]models.Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
                      COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
@@ -114,9 +92,9 @@ func getOwnPosts(userID int) ([]Post, error) {
 	}
 	defer rows.Close()
 
-	var posts []Post
+	var posts []models.Post
 	for rows.Next() {
-		var post Post
+		var post models.Post
 		var categoriesJSON string
 		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
 			return nil, err
@@ -133,7 +111,7 @@ func getOwnPosts(userID int) ([]Post, error) {
 }
 
 // Belirtilen kullanıcı ID'sinin beğendiği gönderileri veritabanından çeker.
-func getLikedPosts(userID int) ([]Post, error) {
+func getLikedPosts(userID int) ([]models.Post, error) {
 	query := `
 		SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
 		       COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
@@ -153,9 +131,9 @@ func getLikedPosts(userID int) ([]Post, error) {
 	}
 	defer rows.Close()
 
-	var posts []Post
+	var posts []models.Post
 	for rows.Next() {
-		var post Post
+		var post models.Post
 		var categoriesJSON string
 		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
 			return nil, err
@@ -172,10 +150,10 @@ func getLikedPosts(userID int) ([]Post, error) {
 }
 
 // Belirtilen kullanıcı ID'sine sahip kullanıcıyı veritabanından çeker.
-func GetUserByID(userID int) (*User, error) {
-	var user User
+func GetUserByID(userID int) (*models.User, error) {
+	var user models.User
 	query := "SELECT id, email, username, password, profile_picture_path, role FROM users WHERE id = ?"
-	err := datahandlers.DB.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password, &user.ProfilePicturePath, &user.Role) // role bilgisini de al
+	err := datahandlers.DB.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Username, &user.Password, &user.ProfilePicturePath, &user.Role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user with ID %d not found", userID)

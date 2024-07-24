@@ -69,32 +69,90 @@ func GetSession(r *http.Request) (*Session, error) {
 	return &session, nil
 }
 
-// Gerekli veritabanı tablolarını oluşturur.
-func CreateTables() {
-	SessionTables(DB)
-	PostTables(DB)
-	UsersTables(DB)
-	VoteTables(DB)
-	CommentTables(DB)
+// Gerekli veritabanı tablolarını oluşturur.// datahandlers.go içerisinde
 
-	// Posts tablosunu oluştur (image_path sütunu ile)
-	_, err := DB.Exec(`
-   CREATE TABLE IF NOT EXISTS posts (
-	   id INTEGER PRIMARY KEY AUTOINCREMENT,
-	   user_id INTEGER,
-	   title TEXT,
-	   content TEXT,
-	   categories TEXT,
-	   created_at TIMESTAMP,
-	   image_path TEXT -- Fotoğraf yolu sütunu
-   );
-`)
-	if err != nil {
-		log.Fatal("Error creating posts table:", err)
-	}
-	if err != nil {
-		log.Fatal("Error adding profile_picture_path column to users table:", err)
-	}
+func CreateTables() {
+    SessionTables(DB)
+    PostTables(DB)
+    UsersTables(DB)
+    VoteTables(DB)
+    CommentTables(DB)
+    CreateModeratorRequestsTable(DB)
+
+    // Posts tablosunu oluştur (image_path sütunu ile)
+    _, err := DB.Exec(`
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            title TEXT,
+            content TEXT,
+            categories TEXT,
+            created_at TIMESTAMP,
+            image_path TEXT,
+            moderated INTEGER DEFAULT 0
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating posts table:", err)
+    }
+
+    // moderator_requests tablosunu oluştur
+    _, err = DB.Exec(`
+        CREATE TABLE IF NOT EXISTS moderator_requests (
+            user_id INTEGER PRIMARY KEY,
+            reason TEXT, -- Başvuru nedeni için sütun eklendi
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating moderator_requests table:", err)
+    }
+
+    
+
+    // reports tablosunu oluştur (content_type sütunu ile)
+    _, err = DB.Exec(`
+        CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            moderator_id INTEGER,
+            reason TEXT,
+            status TEXT DEFAULT 'pending', -- pending, approved, rejected
+            FOREIGN KEY(post_id) REFERENCES posts(id),
+            FOREIGN KEY(moderator_id) REFERENCES users(id)
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating reports table:", err)
+    }
+
+    // categories tablosunu oluştur
+    _, err = DB.Exec(`
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating categories table:", err)
+    }
+}
+
+func CreateReportTables(db *sql.DB) {
+    _, err := db.Exec(`
+        CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            moderator_id INTEGER,
+            reason TEXT,
+            status TEXT DEFAULT 'pending',
+            FOREIGN KEY(post_id) REFERENCES posts(id),
+            FOREIGN KEY(moderator_id) REFERENCES users(id)
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating reports table:", err)
+    }
 }
 
 func SessionTables(db *sql.DB) {
@@ -135,22 +193,24 @@ func PostTables(db *sql.DB) {
 }
 
 func UsersTables(db *sql.DB) {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			email TEXT UNIQUE NOT NULL,
-			username TEXT UNIQUE NOT NULL,
-			password TEXT NOT NULL,
-			role TEXT NOT NULL DEFAULT 'member' -- Yeni role sütunu (varsayılan: member)
-		);`,
-	}
-	for _, query := range queries {
-		_, err := db.Exec(query)
-		if err != nil {
-			log.Fatal("Query failed: ", err)
-		}
-	}
+    queries := []string{
+        `CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'member' -- Yeni rol sütunu (varsayılan: üye)
+        );`,
+    }
+
+    for _, query := range queries {
+        _, err := db.Exec(query)
+        if err != nil {
+            log.Fatal("Query failed: ", err)
+        }
+    }
 }
+
 
 // Like Ve Dislike tablolarını oluştur
 func VoteTables(db *sql.DB) { // Sayısını artırır
@@ -187,4 +247,46 @@ func CommentTables(db *sql.DB) {
 			log.Fatal("Query failed: ", err)
 		}
 	}
+}
+
+// Session token'ına göre oturum bulma fonksiyonu
+func GetSessionFromToken(sessionToken string) (*Session, error) {
+    if DB == nil {
+        return nil, fmt.Errorf("database connection is not initialized")
+    }
+
+    var session Session
+    err := DB.QueryRow("SELECT id, user_id, expiry FROM sessions WHERE id = ?", sessionToken).Scan(&session.ID, &session.UserID, &session.Expiry)
+    if err != nil {
+        return nil, err
+    }
+	err = DB.QueryRow("SELECT id, user_id, expiry FROM sessions WHERE id = ?", sessionToken).Scan(&session.ID, &session.UserID, &session.Expiry)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, nil // Oturum bulunamazsa nil döndür
+        }
+        return nil, err 
+    }
+
+    if session.Expiry.Before(time.Now()) {
+        return nil, fmt.Errorf("session expired")
+    }
+
+    return &session, nil
+}
+
+
+
+
+
+func CreateModeratorRequestsTable(db *sql.DB) {
+    _, err := db.Exec(`
+        CREATE TABLE IF NOT EXISTS moderator_requests (
+            user_id INTEGER PRIMARY KEY,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+    `)
+    if err != nil {
+        log.Fatal("Error creating moderator_requests table:", err)
+    }
 }

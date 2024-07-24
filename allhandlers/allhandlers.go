@@ -53,5 +53,20 @@ func Allhandlers() { // Bu fonksiyon, tüm istek işleyicilerini kaydeder.
     // Profil İşlemleri:
     http.HandleFunc("/myprofil", morehandlers.MyProfileHandler)           // Kullanıcının profilini görüntüleme işlemi için işleyici.
 
-    http.HandleFunc("/admin", morehandlers.MyProfileHandler) 
+    http.HandleFunc("/admin", homehandlers.AdminPanelHandler) // morehandlers.MyProfileHandler yerine
+    http.HandleFunc("/admin/delete-user", homehandlers.DeleteUserHandler) // Örnek URL
+    http.HandleFunc("/checkAdminStatus", homehandlers.CheckAdminStatusHandler)
+    http.HandleFunc("/updateUserRole", homehandlers.UpdateUserRoleHandler)
+    http.HandleFunc("/moderatör", homehandlers.ModeratorPanelHandler)
+    http.HandleFunc("/onayla", homehandlers.OnaylaHandler)
+    http.HandleFunc("/reddet", homehandlers.ReddetHandler)
+    http.HandleFunc("/moderator-request", homehandlers.HandleModeratorRequest)
+    http.HandleFunc("/approve-moderator-request", homehandlers.ApproveModeratorRequestHandler)
+    http.HandleFunc("/reject-moderator-request", homehandlers.RejectModeratorRequestHandler)
+    http.HandleFunc("/report-post", homehandlers.ReportPostHandler) // posthandlers yerine homehandlers
+    http.HandleFunc("/approve-report", homehandlers.ApproveReportHandler)
+    http.HandleFunc("/reject-report", homehandlers.RejectReportHandler)
+    http.HandleFunc("/addCategory", homehandlers.AddCategoryHandler)
+    http.HandleFunc("/deleteCategory", homehandlers.DeleteCategoryHandler)
+    http.HandleFunc("/getCategories", homehandlers.GetCategoriesHandler)
 }

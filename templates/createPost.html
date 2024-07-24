@@ -1,12 +1,12 @@
+<!-- createPost.html -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Create Post</title>
     <link rel="stylesheet" type="text/css" href="/static/css/create.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-
 <body>
     <script src="static/scripts.js"></script>
     <div class="create-post-container" id="create-post-container">
@@ -86,6 +86,7 @@
             selectedLanguagesList.innerHTML = ''; // Seçilen kategoriler listesini temizle
             updateCategoriesInput();
         });
+
         // Kategoriler penceresini açan fonksiyon
         function openCategoriesDropdown() {
             document.getElementById('resultsContainer').style.display = 'block';
@@ -108,30 +109,48 @@
             }
         });
 
-
         // Dropdown ve arama fonksiyonları
         const searchBox = document.getElementById('searchBox');
         const resultsContainer = document.getElementById('resultsContainer');
         const selectedLanguagesList = document.getElementById('selectedLanguagesList');
-        const categories = ['Database', 'Programming', 'Artificial Intelligence', 'Game Engines', 'Robotic Systems',
-            'React Native', 'Cyber Security'
-        ];
 
-        searchBox.addEventListener('focus', function () {
-            displayInitialCategories();
-        });
+        // Kategorileri JSON dosyasından yükle
+        $.getJSON('/getCategories', function (data) {
+            const categories = data.categories;
 
-        searchBox.addEventListener('input', function () {
-            const query = this.value.toLowerCase();
-            resultsContainer.innerHTML = ''; // Clear previous results
+            searchBox.addEventListener('focus', function () {
+                displayInitialCategories();
+            });
 
-            if (query.length > 0) {
-                resultsContainer.style.display = 'block'; // Show the container if there's a query
+            searchBox.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                resultsContainer.innerHTML = ''; // Clear previous results
 
-                const filteredCategories = categories.filter(category => category.toLowerCase().includes(
-                    query));
+                if (query.length > 0) {
+                    resultsContainer.style.display = 'block'; // Show the container if there's a query
 
-                filteredCategories.forEach(category => {
+                    const filteredCategories = categories.filter(category => category.toLowerCase().includes(query));
+
+                    filteredCategories.forEach(category => {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item';
+                        item.textContent = category;
+                        item.addEventListener('click', function () {
+                            selectCategory(category);
+                        });
+                        resultsContainer.appendChild(item);
+                    });
+                } else {
+                    displayInitialCategories();
+                }
+            });
+
+            function displayInitialCategories() {
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'block';
+
+                // Tüm kategorileri listele
+                categories.forEach(category => {
                     const item = document.createElement('div');
                     item.className = 'dropdown-item';
                     item.textContent = category;
@@ -140,103 +159,36 @@
                     });
                     resultsContainer.appendChild(item);
                 });
-            } else {
-                displayInitialCategories();
-            }
-        });
-
-        function displayInitialCategories() {
-            resultsContainer.innerHTML = '';
-            resultsContainer.style.display = 'block';
-
-            // Tüm kategorileri listele
-            categories.forEach(category => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-item';
-                item.textContent = category;
-                item.addEventListener('click', function () {
-                    selectCategory(category);
-                });
-                resultsContainer.appendChild(item);
-            });
-        }
-
-        function selectCategory(category) {
-            const selectedCategories = Array.from(selectedLanguagesList.children).map(item => item.textContent);
-
-            if (selectedCategories.includes(category)) {
-                alert("Bu kategori zaten seçildi.");
-                return;
             }
 
-            if (selectedCategories.length < 3) {
-                const selectedCategory = document.createElement('span');
-                selectedCategory.className = 'dropdown-item';
-                selectedCategory.textContent = category;
-                selectedCategory.addEventListener('click', function () {
-                    selectedLanguagesList.removeChild(selectedCategory);
+            function selectCategory(category) {
+                const selectedCategories = Array.from(selectedLanguagesList.children).map(item => item.textContent);
+
+                if (selectedCategories.includes(category)) {
+                    alert("Bu kategori zaten seçildi.");
+                    return;
+                }
+
+                if (selectedCategories.length < 3) {
+                    const selectedCategory = document.createElement('span');
+                    selectedCategory.className = 'dropdown-item';
+                    selectedCategory.textContent = category;
+                    selectedCategory.addEventListener('click', function () {
+                        selectedLanguagesList.removeChild(selectedCategory);
+                        updateCategoriesInput();
+                    });
+                    selectedLanguagesList.appendChild(selectedCategory);
                     updateCategoriesInput();
-                });
-                selectedLanguagesList.appendChild(selectedCategory);
-                updateCategoriesInput();
-            } else {
-                alert("En fazla 3 kategori seçebilirsiniz.");
+                } else {
+                    alert("En fazla 3 kategori seçebilirsiniz.");
+                }
             }
-        }
 
-        // Create Post butonunu hedefle
-        const createPostButton = document.querySelector('.create-post-button');
-
-        // Create Post butonuna tıklandığında
-        createPostButton.addEventListener('click', function (event) {
-            event.preventDefault(); // Formun otomatik olarak gönderilmesini engelle
-            const form = document.querySelector('form');
-            const title = form.title.value;
-            const content = form.content.value;
-            const categories = Array.from(document.querySelectorAll('#selectedLanguagesList .dropdown-item'))
-                .map(item => item.textContent);
-
-            // Kategori verilerini formun hidden bir alanına ekleyin
-            const categoriesInput = document.createElement('input');
-            categoriesInput.type = 'hidden';
-            categoriesInput.name = 'categories';
-            categoriesInput.value = JSON.stringify(categories);
-            form.appendChild(categoriesInput);
-
-            form.submit(); // Formu gönder
+            function updateCategoriesInput() {
+                const selectedCategories = Array.from(selectedLanguagesList.children).map(item => item.textContent);
+                document.getElementById('categoriesInput').value = JSON.stringify(selectedCategories);
+            }
         });
-
-
-
-        function selectCategory(category) {
-            const selectedCategories = Array.from(selectedLanguagesList.children).map(item => item.textContent);
-
-            if (selectedCategories.includes(category)) {
-                alert("Bu kategori zaten seçildi.");
-                return;
-            }
-
-            if (selectedLanguagesList.children.length >= 3) { // Changed to >=
-                alert("En fazla 3 kategori seçebilirsiniz.");
-                return; // Added return to stop execution
-            }
-
-            const selectedCategory = document.createElement('span');
-            selectedCategory.className = 'dropdown-item';
-            selectedCategory.textContent = category;
-            selectedCategory.addEventListener('click', function () {
-                selectedLanguagesList.removeChild(selectedCategory);
-                updateCategoriesInput();
-            });
-            selectedLanguagesList.appendChild(selectedCategory);
-            updateCategoriesInput();
-        }
-
-
-        function updateCategoriesInput() {
-            const selectedCategories = Array.from(selectedLanguagesList.children).map(item => item.textContent);
-            document.getElementById('categoriesInput').value = JSON.stringify(selectedCategories);
-        }
 
         function changeTheme(theme) {
             document.body.classList.remove('light-mode', 'night-mode');
@@ -273,5 +225,4 @@
     </script>
 
 </body>
-
 </html>

@@ -1,17 +1,200 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
+
 <head>
+    <title>Admin Paneli</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body>
-    <script>
-        const isAdmin = checkIfAdmin(); // Oturum bilgilerini kontrol et
 
-if (!isAdmin) {
-    window.location.href = "/"; // Ana sayfaya yönlendir
+<body>
+    <h1>Admin Paneli</h1>
+    <div class="tabs">
+        <button class="tab-link active" onclick="openTab(event, 'notifications')">Bildirimler</button>
+        <button class="tab-link" onclick="openTab(event, 'community')">Topluluk</button>
+        <button class="tab-link" onclick="openTab(event, 'categories')">Kategoriler</button>
+    </div>
+
+    <div id="notifications" class="tab-content" style="display: block;">
+        <h3>Bildirimler</h3>
+        <ul>
+            {{range .ModeratorRequests}}
+            <li>
+                {{.Username}} ({{.Reason}})
+                <form action="/approve-moderator-request" method="POST">
+                    <input type="hidden" name="user_id" value="{{.UserID}}">
+                    <button type="submit">Onayla</button>
+                </form>
+                <form action="/reject-moderator-request" method="POST">
+                    <input type="hidden" name="user_id" value="{{.UserID}}">
+                    <button type="submit">Reddet</button>
+                </form>
+            </li>
+            {{end}}
+        </ul>
+
+        <h3>Raporlar</h3>
+        <ul>
+            {{range .Reports}}
+            <li>
+                Gönderi: {{.PostTitle}} (ID: {{.PostID}})<br>
+                Moderatör: {{.ModeratorName}} (ID: {{.ModeratorID}})<br>
+                Neden: {{.Reason}}<br>
+                Durum: {{.Status}}<br>
+                {{if eq .Status "pending"}}
+                <form action="/approve-report" method="POST">
+                    <button type="submit" name="report_id" value="{{.ID}}">Onayla</button>
+                </form>
+                <form action="/reject-report" method="POST">
+                    <button type="submit" name="report_id" value="{{.ID}}">Reddet</button>
+                </form>
+                {{end}}
+            </li>
+            {{end}}
+        </ul>
+    </div>
+
+    <div id="community" class="tab-content">
+        <h2>Topluluk</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Kullanıcı Adı</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Users}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td>{{.Username}}</td>
+                    <td>{{.Email}}</td>
+                    <td>{{.Role}}</td>
+                    <td>
+                        <form action="/updateUserRole" method="post">
+                            <input type="hidden" name="user_id" value="{{.ID}}">
+                            <select name="role">
+                                <option value="member" {{if eq .Role "member"}}selected{{end}}>Üye</option>
+                                <option value="moderator" {{if eq .Role "moderator"}}selected{{end}}>Moderatör</option>
+                                <option value="guest" {{if eq .Role "guest"}}selected{{end}}>Misafir</option>
+                            </select>
+                            <button type="submit">Güncelle</button>
+                        </form>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="categories" class="tab-content">
+        <ul id="categoryList"></ul>
+    
+        <h2>Kategori Ekleme</h2>
+        <form id="addCategoryForm">
+            <label for="categoryName">Kategori Adı:</label>
+            <input type="text" id="categoryName" name="categoryName" required>
+            <button type="submit">Kategori Ekle</button>
+        </form>
+    
+
+    <script>
+        $(document).ready(function() {
+            // Sayfa yüklendiğinde ve kategori ekleme/silme işlemlerinden sonra kategorileri güncelle
+            function refreshCategories() {
+                $.ajax({
+                    url: '/getCategories',
+                    method: 'GET',
+                    success: function(response) {
+                        var categoryList = $('#categoryList');
+                        categoryList.empty(); // Listeyi temizle
+                        response.categories.forEach(function(category) {
+                            categoryList.append('<li>' + category +
+                                ' <form class="deleteCategoryForm" action="/deleteCategory" method="POST" style="display:inline;">' +
+                                '<input type="hidden" name="categoryName" value="' + category + '">' +
+                                '<button type="submit">Sil</button>' +
+                                '</form></li>');
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Kategoriler getirilirken bir hata oluştu: ' + error);
+                    }
+                });
+            }
+    
+            refreshCategories();
+    
+            // Kategori ekleme AJAX isteği
+            $('#addCategoryForm').on('submit', function(event) {
+                event.preventDefault();
+                var categoryName = $('#categoryName').val();
+    
+                $.ajax({
+                    url: '/addCategory',
+                    method: 'POST',
+                    data: { categoryName: categoryName },
+                    success: function(response) {
+                        if (response.success) {
+                            // Kategori başarıyla eklendi
+                            refreshCategories();
+                            $('#categoryName').val(''); // Input alanını temizle
+                        } else {
+                            // Hata durumu
+                            alert('Kategori eklenirken hata oluştu: ' + response.error);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Kategori eklenirken bir hata oluştu: ' + error);
+                    }
+                });
+            });
+    
+            // Kategori silme AJAX isteği
+            $('#categoryList').on('submit', '.deleteCategoryForm', function(event) {
+                event.preventDefault();
+                var form = $(this);
+                var categoryName = form.find('input[name="categoryName"]').val();
+    
+                $.ajax({
+                    url: '/deleteCategory',
+                    method: 'POST',
+                    data: { categoryName: categoryName },
+                    success: function(response) {
+                        if (response.success) {
+                            // Kategori başarıyla silindi
+                            refreshCategories();
+                        } else {
+                            // Hata durumu
+                            alert('Kategori silinirken hata oluştu: ' + response.error);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Kategori silinirken bir hata oluştu: ' + error);
+                    }
+                });
+            });
+        });
+
+
+        function openTab(evt, tabName) {
+    var i, tabContent, tabLinks;
+    tabContent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabContent.length; i++) {
+        tabContent[i].style.display = "none";
+    }
+    tabLinks = document.getElementsByClassName("tab-link");
+    for (i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
 }
     </script>
 </body>
+
 </html>

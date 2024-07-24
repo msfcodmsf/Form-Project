@@ -1,4 +1,4 @@
-// homehandl
+// homehandlers
 package homehandlers
 
 import (
@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"form-project/datahandlers"
+	"form-project/models"
 	"form-project/morehandlers"
 	"form-project/utils"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -27,34 +29,6 @@ import (
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 )
-
-type User struct {
-	ID       int            `validate:"-"`
-	Email    string         `validate:"required,email"`
-	Username sql.NullString // Google kayıtta bazen boş olabilir
-	Password sql.NullString // Google kayıtta şifre alanı gereksiz olabilir
-}
-
-type Post struct {
-	ID                  int
-	UserID              int
-	Title               string
-	Content             string
-	Categories          []string // JSON olarak kaydedilecek ve geri okunacak
-	CategoriesFormatted string   // Virgülle ayrılmış kategoriler
-	CreatedAt           time.Time
-	CreatedAtFormatted  string
-	LikeCount           int
-	DislikeCount        int
-	Username            string
-	CommentCount        int
-}
-
-type RegisterTemplateData struct {
-	ErrorMessages map[string]string
-	Email         string
-	Username      string
-}
 
 var (
 	validate    = validator.New()
@@ -149,40 +123,64 @@ func HandleGoogleRegister(w http.ResponseWriter, r *http.Request) {
 
 // Ana sayfayı görüntüler.
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := datahandlers.GetSession(r)
+    session, _ := datahandlers.GetSession(r)
 
-	searchQuery := r.URL.Query().Get("search")
-	category := r.URL.Query().Get("category")
-	filter := r.URL.Query().Get("filter")
+    searchQuery := r.URL.Query().Get("search")
+    category := r.URL.Query().Get("category")
+    filter := r.URL.Query().Get("filter")
 
-	posts, err := getFilteredPosts(searchQuery, category, filter, nil)
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+    posts, err := getFilteredPosts(searchQuery, category, filter, nil)
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
 
-	tmpl, err := template.ParseFiles("templates/index.html")
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+    // Kategorileri Getir
+    categoryRows, err := datahandlers.DB.Query("SELECT name FROM categories")
+    if err != nil {
+        utils.HandleErr(w, err, "Kategoriler getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer categoryRows.Close()
 
-	data := struct {
-		Posts    []Post
-		LoggedIn bool
-	}{
-		Posts:    posts,
-		LoggedIn: session != nil,
-	}
+    var categories []string
+    for categoryRows.Next() {
+        var category string
+        if err := categoryRows.Scan(&category); err != nil {
+            utils.HandleErr(w, err, "Kategori bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        categories = append(categories, category)
+    }
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
-	}
+    tmpl, err := template.ParseFiles("templates/index.html")
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    data := struct {
+        Posts        []models.Post
+        LoggedIn     bool
+        IsAdmin      bool
+        IsModerator  bool
+        Categories   []string // Kategoriler eklendi
+    }{
+        Posts:        posts,
+        LoggedIn:     session != nil,
+        IsAdmin:      isAdmin(r),
+        IsModerator: IsModerator(r),
+        Categories:   categories, // Kategoriler eklendi
+    }
+
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+    }
 }
 
 // Verilen filtrelere (arama sorgusu, kategori, filtre türü, kullanıcı ID'si) göre gönderileri veritabanından çeker.
-func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post, error) {
+func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]models.Post, error) {
 	query := `SELECT posts.id, posts.user_id, posts.title, posts.content, posts.categories, posts.created_at, users.username,
                      COALESCE(SUM(CASE WHEN votes.vote_type = 1 THEN 1 ELSE 0 END), 0) AS like_count,
                      COALESCE(SUM(CASE WHEN votes.vote_type = -1 THEN 1 ELSE 0 END), 0) AS dislike_count,
@@ -190,10 +188,10 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
               FROM posts
               JOIN users ON posts.user_id = users.id
               LEFT JOIN votes ON votes.post_id = posts.id
-              WHERE posts.deleted = 0`
+              WHERE posts.deleted = 0 AND posts.moderated = 1` // Sadece onaylanmış gönderileri al
 
-	args := []interface{}{}  // Sorgu parametreleri için
-	conditions := []string{} // Filtreleme koşulları için
+	args := []interface{}{}
+	conditions := []string{}
 
 	if searchQuery != "" {
 		conditions = append(conditions, "(posts.title LIKE ? OR posts.content LIKE ?)")
@@ -208,8 +206,8 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 	}
 
 	if userID != nil {
-		conditions = append(conditions, "(posts.user_id = ? OR posts.id IN (SELECT post_id FROM likes WHERE user_id = ?))")
-		args = append(args, *userID, *userID)
+		conditions = append(conditions, "posts.user_id = ?")
+		args = append(args, *userID)
 	}
 
 	if len(conditions) > 0 {
@@ -233,9 +231,9 @@ func getFilteredPosts(searchQuery, category, filter string, userID *int) ([]Post
 	}
 	defer rows.Close()
 
-	var posts []Post
+	var posts []models.Post
 	for rows.Next() {
-		var post Post
+		var post models.Post
 		var categoriesJSON string
 		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username, &post.LikeCount, &post.DislikeCount, &post.CommentCount); err != nil {
 			return nil, err
@@ -288,18 +286,18 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				errorMessages["Email"] = err.Error() // Generic error message
 			}
 
-			renderRegisterTemplate(w, RegisterTemplateData{ErrorMessages: errorMessages})
+			renderRegisterTemplate(w, models.RegisterTemplateData{ErrorMessages: errorMessages})
 			return
 		}
 	default: // GET request
 		tmpl, err := template.ParseFiles("templates/register.html")
 		if err != nil {
-			utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+
 			return
 		}
 
 		// Şablon verilerini hazırla
-		data := RegisterTemplateData{
+		data := models.RegisterTemplateData{
 			ErrorMessages: errorMessages, // Hata mesajlarını şablona aktar
 			Email:         email,
 		}
@@ -310,11 +308,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loginError(w http.ResponseWriter, r *http.Request, message string) {
-	redirectURL := "/login?error=" + message
-	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-}
-
 func registerUser(w http.ResponseWriter, r *http.Request) error {
 	email := r.FormValue("email")
 	googleOAuth := r.FormValue("google_oauth")
@@ -322,12 +315,14 @@ func registerUser(w http.ResponseWriter, r *http.Request) error {
 	// 1. Check if email exists (regardless of registration method)
 	var existingUserID int
 	err := datahandlers.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&existingUserID)
+	utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+
 	existingUser, _ := getUserByEmail(email)
 	if existingUser != nil {
 		return fmt.Errorf("user already exists")
 	}
 
-	var user User
+	var user models.User
 	if googleOAuth == "true" {
 		// 2b. Google OAuth (New Registration)
 		code := r.FormValue("code")
@@ -343,7 +338,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) error {
 
 		username := strings.ToLower(strings.ReplaceAll(name, " ", "")) + "_" + generateRandomString(5)
 
-		user = User{
+		user = models.User{
 			Email:    email,
 			Username: sql.NullString{String: username, Valid: true},
 			Password: sql.NullString{Valid: false}, // No password for Google OAuth
@@ -374,7 +369,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 
-		user = User{
+		user = models.User{
 			Email:    email,
 			Username: sql.NullString{String: username, Valid: true},
 			Password: sql.NullString{String: string(hashedPassword), Valid: true},
@@ -410,13 +405,13 @@ func registerError(w http.ResponseWriter, r *http.Request, s string) {
 	panic("unimplemented")
 }
 
-func saveUser(user *User) error {
+func saveUser(user *models.User) error {
 	_, err := datahandlers.DB.Exec("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", user.Email, user.Username, user.Password)
 	return err
 }
 
-func getUserByEmail(email string) (*User, error) {
-	var user User
+func getUserByEmail(email string) (*models.User, error) {
+	var user models.User
 	err := datahandlers.DB.QueryRow("SELECT id, email, username, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Username, &user.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -425,17 +420,6 @@ func getUserByEmail(email string) (*User, error) {
 		return nil, err // Database error
 	}
 	return &user, nil
-}
-
-func getErrorMessage(fe validator.FieldError) string {
-	switch fe.Tag() {
-	case "required":
-		return "This field is required"
-	case "email":
-		return "Invalid email address"
-	default:
-		return "Validation error" // Generic error message
-	}
 }
 
 func getGoogleUserByEmail(email string) (int64, error) {
@@ -452,7 +436,7 @@ func getGoogleUserByEmail(email string) (int64, error) {
 }
 
 // Kayıt formunu göstermek için HTML şablonunu render eder.
-func renderRegisterTemplate(w http.ResponseWriter, data RegisterTemplateData) {
+func renderRegisterTemplate(w http.ResponseWriter, data models.RegisterTemplateData) {
 	tmpl, err := template.ParseFiles("templates/register.html")
 	if err != nil {
 		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
@@ -649,7 +633,7 @@ func HandleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			data := RegisterTemplateData{Email: email}
+			data := models.RegisterTemplateData{Email: email}
 			data.ErrorMessages = map[string]string{"Email": "Bu Email zaten kayıtlı."}
 
 			// Şablonu işleyerek yanıtı gönder
@@ -790,7 +774,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			data := RegisterTemplateData{Email: email}
+			data := models.RegisterTemplateData{Email: email}
 			data.ErrorMessages = map[string]string{"Email": "Bu Email zaten kayıtlı."}
 
 			// Şablonu işleyerek yanıtı gönder
@@ -1047,4 +1031,743 @@ func isAdmin(r *http.Request) bool {
 		return user.Role == "admin"
 	}
 	return false
+}
+
+func CheckAdminStatusHandler(w http.ResponseWriter, r *http.Request) {
+	// Gelen isteğin POST olup olmadığını kontrol et
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// JSON verisini oku
+	var requestData struct {
+		SessionToken string `json:"sessionToken"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
+		utils.HandleErr(w, err, "Invalid request data", http.StatusBadRequest)
+		return
+	}
+
+	// Session'ı doğrula (datahandlers.GetSession fonksiyonunu kullanabilirsiniz)
+	session, err := datahandlers.GetSessionFromToken(requestData.SessionToken)
+	if err != nil || session == nil { // Oturum bulunamazsa veya hata oluşursa
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Kullanıcının admin olup olmadığını kontrol et
+	user, err := morehandlers.GetUserByID(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	isAdmin := user.Role == "admin"
+	response := map[string]bool{"isAdmin": isAdmin}
+	json.NewEncoder(w).Encode(response)
+}
+
+func AdminPanelHandler(w http.ResponseWriter, r *http.Request) {
+    // 1. Yönetici Oturum Kontrolü
+    session, err := datahandlers.GetSession(r)
+    if err != nil || session == nil {
+        http.Error(w, "Yetkisiz Erişim", http.StatusUnauthorized)
+        return
+    }
+
+    // 2. Yönetici Yetki Kontrolü
+    adminUser, err := morehandlers.GetUserByID(session.UserID)
+    if err != nil || adminUser.Role != "admin" {
+        http.Error(w, "Bu Sayfaya Erişim Yetkiniz Yok", http.StatusForbidden)
+        return
+    }
+
+    // 3. Kullanıcıları Getir (Yöneticiler hariç)
+    userRows, err := datahandlers.DB.Query("SELECT id, username, email, role FROM users WHERE role != 'admin'")
+    if err != nil {
+        utils.HandleErr(w, err, "Kullanıcılar getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer userRows.Close()
+
+    var users []models.User
+    for userRows.Next() {
+        var user models.User
+        if err := userRows.Scan(&user.ID, &user.Username, &user.Email, &user.Role); err != nil {
+            utils.HandleErr(w, err, "Kullanıcı bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        users = append(users, user)
+    }
+
+    // 4. Moderatörlük İsteklerini Getir
+    requestRows, err := datahandlers.DB.Query("SELECT user_id, reason FROM moderator_requests")
+    if err != nil {
+        utils.HandleErr(w, err, "Moderatör istekleri getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer requestRows.Close()
+
+    var moderatorRequests []models.ModeratorRequest
+    for requestRows.Next() {
+        var request models.ModeratorRequest
+        if err := requestRows.Scan(&request.UserID, &request.Reason); err != nil {
+            utils.HandleErr(w, err, "Moderatör isteği bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+
+        request.Username, err = getUserNameByID(request.UserID)
+        if err != nil {
+            utils.HandleErr(w, err, "Kullanıcı adı getirilirken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        moderatorRequests = append(moderatorRequests, request)
+    }
+
+    // 5. Raporları Getir
+    reportRows, err := datahandlers.DB.Query("SELECT id, post_id, moderator_id, reason, status FROM reports WHERE post_id IN (SELECT id FROM posts WHERE deleted = 0)")
+    if err != nil {
+        utils.HandleErr(w, err, "Raporlar getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer reportRows.Close()
+
+    var reports []models.Report
+    for reportRows.Next() {
+        var report models.Report
+        if err := reportRows.Scan(&report.ID, &report.PostID, &report.ModeratorID, &report.Reason, &report.Status); err != nil {
+            utils.HandleErr(w, err, "Rapor bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+
+        report.PostTitle, err = getPostTitleByID(report.PostID)
+        if err != nil {
+            utils.HandleErr(w, err, "Gönderi başlığı getirilirken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        report.ModeratorName, err = getUserNameByID(report.ModeratorID)
+        if err != nil {
+            utils.HandleErr(w, err, "Moderatör adı getirilirken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+
+        reports = append(reports, report)
+    }
+
+    // 6. Kategorileri Getir
+    categoryRows, err := datahandlers.DB.Query("SELECT name FROM categories")
+    if err != nil {
+        utils.HandleErr(w, err, "Kategoriler getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer categoryRows.Close()
+
+    var categories []string
+    for categoryRows.Next() {
+        var category string
+        if err := categoryRows.Scan(&category); err != nil {
+            utils.HandleErr(w, err, "Kategori bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        categories = append(categories, category)
+    }
+
+    // 7. Şablon Verilerini Hazırla
+    data := struct {
+        Users             []models.User
+        AdminUser         *models.User
+        ModeratorRequests []models.ModeratorRequest
+        Reports           []models.Report
+        Categories        []string
+    }{
+        Users:             users,
+        AdminUser:         adminUser,
+        ModeratorRequests: moderatorRequests,
+        Reports:           reports,
+        Categories:        categories,
+    }
+
+    // 8. Şablonu İşle ve Gönder
+    tmpl, err := template.ParseFiles("templates/admin.html")
+    if err != nil {
+        utils.HandleErr(w, err, "Şablon ayrıştırılırken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        utils.HandleErr(w, err, "Şablon işlenirken hata oluştu.", http.StatusInternalServerError)
+    }
+}
+func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Yetkilendirme kontrolü:
+	if !isAdmin(r) {
+		http.Error(w, "Forbidden", http.StatusForbidden) // Yetkisiz kullanıcıları engelle
+		return
+	}
+
+	userID := r.FormValue("user_id")
+
+	// Kullanıcı ID'sinin geçerli olup olmadığını kontrol edin
+	if userID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Kullanıcıyı veritabanından silme işlemi
+	_, err := datahandlers.DB.Exec("DELETE FROM users WHERE id = ?", userID)
+	if err != nil {
+		utils.HandleErr(w, err, "Error deleting user", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther) // Admin paneline geri yönlendir
+}
+
+func UpdateUserRoleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	adminUser, err := morehandlers.GetUserByID(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if adminUser.Role != "admin" {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	userID := r.FormValue("user_id")
+	role := r.FormValue("role")
+
+	_, err = datahandlers.DB.Exec("UPDATE users SET role = ? WHERE id = ?", role, userID)
+	if err != nil {
+		utils.HandleErr(w, err, "Error updating user role", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func IsModerator(r *http.Request) bool {
+	session, _ := datahandlers.GetSession(r)
+	if session != nil {
+		user, err := morehandlers.GetUserByID(session.UserID)
+		if err != nil {
+			return false
+		}
+		return user.Role == "moderator" // Check for moderator role
+	}
+	return false
+}
+
+func ModeratorPanelHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Error(w, "Yetkisiz Erişim", http.StatusUnauthorized)
+		return
+	}
+
+	// Moderatör kullanıcı bilgilerini al (gerekirse bu kısmı düzenlemeniz gerekebilir)
+	moderatorUser, err := morehandlers.GetUserByID(session.UserID)
+	if err != nil {
+		utils.HandleErr(w, err, "Sunucu Hatası", http.StatusInternalServerError)
+		return
+	}
+
+	if moderatorUser.Role != "moderator" { // Kullanıcının moderatör olup olmadığını kontrol et
+		http.Error(w, "Bu Sayfaya Erişim Yetkiniz Yok", http.StatusForbidden)
+		return
+	}
+
+	// Moderasyon gerektiren gönderileri al (örneğin, rapor edilmiş gönderiler, onay bekleyen gönderiler)
+	// Burayı veritabanınızdaki verilere göre düzenlemelisiniz
+	postsToModerate, err := getPostsToModerate()
+	if err != nil {
+		utils.HandleErr(w, err, "Sunucu Hatası", http.StatusInternalServerError)
+		return
+	}
+
+	// Şablon için verileri hazırla
+	data := struct {
+		ModeratorUser   *models.User
+		PostsToModerate []models.Post // Post yapısının olduğunu varsayıyoruz
+	}{
+		ModeratorUser:   moderatorUser,
+		PostsToModerate: postsToModerate,
+	}
+
+	// Moderatör panel şablonunu ayrıştır ve çalıştır
+	tmpl, err := template.ParseFiles("templates/moderatör.html")
+	if err != nil {
+		utils.HandleErr(w, err, "Sunucu Hatası", http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		utils.HandleErr(w, err, "Sunucu Hatası", http.StatusInternalServerError)
+	}
+}
+
+// In your homehandlers.go file:
+
+func getPostsToModerate() ([]models.Post, error) {
+	var posts []models.Post
+
+	// SQL sorgusu: moderated = 0 olan ve silinmemiş gönderileri seçer.
+	rows, err := datahandlers.DB.Query(`
+        SELECT p.id, p.user_id, p.title, p.content, p.categories, p.created_at, u.username
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.moderated = 0 AND p.deleted = 0
+    `)
+
+	if err != nil {
+		log.Println("Moderasyon gerektiren gönderileri alma hatası:", err)
+		return nil, err // Hata durumunda nil ve hata mesajı döndürülür.
+	}
+	defer rows.Close()
+
+	// Sorgu sonuçlarını Post struct'larına dönüştürme
+	for rows.Next() {
+		var post models.Post
+		var categoriesJSON string
+
+		// Sütun değerlerini post değişkenine aktar
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &categoriesJSON, &post.CreatedAt, &post.Username); err != nil {
+			return nil, err
+		}
+
+		// JSON formatındaki kategorileri ayrıştır
+		if err := json.Unmarshal([]byte(categoriesJSON), &post.Categories); err != nil {
+			return nil, err
+		}
+
+		// Kategorileri virgülle ayırarak formatla
+		post.CategoriesFormatted = strings.Join(post.Categories, ", ")
+		post.CreatedAtFormatted = post.CreatedAt.Format("2006-01-02 15:04")
+		posts = append(posts, post) // Oluşturulan post'u posts listesine ekle
+	}
+
+	return posts, nil // Moderasyon bekleyen gönderi listesini döndür
+}
+
+// In your homehandlers.go file:
+
+func OnaylaHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Moderatör Kontrolü
+	if !IsModerator(r) {
+		http.Error(w, "Bu sayfaya erişim yetkiniz yok.", http.StatusForbidden)
+		return
+	}
+
+	// 2. Gönderi ID'sini Al
+	postID := r.FormValue("post_id")
+	if postID == "" {
+		http.Error(w, "Geçersiz gönderi ID'si.", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Gönderiyi Onayla (Veritabanı Güncellemesi)
+	_, err := datahandlers.DB.Exec("UPDATE posts SET moderated = 1 WHERE id = ?", postID)
+	if err != nil {
+		utils.HandleErr(w, err, "Gönderi onaylanırken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Yönlendirme (Moderatör Paneline Geri)
+	http.Redirect(w, r, "/moderatör", http.StatusSeeOther)
+}
+
+func ReddetHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Moderatör Kontrolü
+	if !IsModerator(r) {
+		http.Error(w, "Bu sayfaya erişim yetkiniz yok.", http.StatusForbidden)
+		return
+	}
+
+	// 2. Gönderi ID'sini Al
+	postID := r.FormValue("post_id")
+	if postID == "" {
+		http.Error(w, "Geçersiz gönderi ID'si.", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Gönderiyi Reddet (Veritabanından Sil)
+	_, err := datahandlers.DB.Exec("DELETE FROM posts WHERE id = ?", postID)
+	if err != nil {
+		utils.HandleErr(w, err, "Gönderi reddedilirken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Yönlendirme (Moderatör Paneline Geri)
+	http.Redirect(w, r, "/moderatör", http.StatusSeeOther)
+}
+
+// homehandlers.go içinde
+func HandleModeratorRequest(w http.ResponseWriter, r *http.Request) {
+	// 1. Oturum Kontrolü
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// 2. Form Gönderimi Kontrolü
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 3. Başvuru Nedenini Al
+	reason := r.FormValue("reason") // Başvuru nedeni için form alanı
+
+	// 4. Veritabanına Başvuruyu Kaydet
+	_, err = datahandlers.DB.Exec("INSERT INTO moderator_requests (user_id, reason) VALUES (?, ?)", session.UserID, reason)
+	if err != nil {
+		utils.HandleErr(w, err, "Başvuru kaydedilirken hata oluştu", http.StatusInternalServerError)
+		return
+	}
+
+	// 5. Başarılı Mesajı ve Yönlendirme
+	// Başarılı başvuru mesajı gösterilebilir veya doğrudan yönlendirme yapılabilir.
+	http.Redirect(w, r, "/basarili-basvuru", http.StatusSeeOther)
+}
+
+func getUserNameByID(userID int) (string, error) {
+	var username string
+	err := datahandlers.DB.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&username)
+	return username, err
+}
+
+// homehandlers.go içerisinde
+// ... (diğer fonksiyonlar)
+
+func ApproveModeratorRequestHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Yönetici Kontrolü
+	if !isAdmin(r) {
+		http.Error(w, "Bu sayfaya erişim yetkiniz yok.", http.StatusForbidden)
+		return
+	}
+
+	// 2. Kullanıcı ID'sini Al
+	userID := r.FormValue("user_id")
+	if userID == "" {
+		http.Error(w, "Geçersiz kullanıcı ID'si.", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Kullanıcının Rolünü Güncelle
+	_, err := datahandlers.DB.Exec("UPDATE users SET role = 'moderator' WHERE id = ?", userID)
+	if err != nil {
+		utils.HandleErr(w, err, "Kullanıcının rolü güncellenirken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. İsteği Sil
+	_, err = datahandlers.DB.Exec("DELETE FROM moderator_requests WHERE user_id = ?", userID)
+	if err != nil {
+		utils.HandleErr(w, err, "Moderatör isteği silinirken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	// 5. Yönlendirme (Admin Paneline Geri)
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func RejectModeratorRequestHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Yönetici Kontrolü
+	if !isAdmin(r) {
+		http.Error(w, "Bu sayfaya erişim yetkiniz yok.", http.StatusForbidden)
+		return
+	}
+
+	// 2. Kullanıcı ID'sini Al
+	userID := r.FormValue("user_id")
+	if userID == "" {
+		http.Error(w, "Geçersiz kullanıcı ID'si.", http.StatusBadRequest)
+		return
+	}
+
+	// 3. İsteği Sil
+	_, err := datahandlers.DB.Exec("DELETE FROM moderator_requests WHERE user_id = ?", userID)
+	if err != nil {
+		utils.HandleErr(w, err, "Moderatör isteği silinirken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Yönlendirme (Admin Paneline Geri)
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func ApproveReportHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Yönetici Oturum Kontrolü
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil || !isAdmin(r) {
+		http.Error(w, "Yetkisiz Erişim", http.StatusUnauthorized)
+		return
+	}
+
+	// 2. Rapor ID'sini Al
+	reportIDStr := r.FormValue("report_id")
+	reportID, err := strconv.Atoi(reportIDStr)
+	if err != nil {
+		http.Error(w, "Geçersiz rapor ID'si.", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Raporu Onayla ve İlgili Gönderiyi Sil
+	tx, err := datahandlers.DB.Begin()
+	if err != nil {
+		utils.HandleErr(w, err, "Veritabanı işlemi başlatılamadı.", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("UPDATE reports SET status = 'approved' WHERE id = ?", reportID)
+	if err != nil {
+		utils.HandleErr(w, err, "Rapor onaylanırken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	var postID int
+	err = tx.QueryRow("SELECT post_id FROM reports WHERE id = ?", reportID).Scan(&postID)
+	if err != nil {
+		utils.HandleErr(w, err, "Rapor edilen gönderi bulunamadı.", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec("DELETE FROM posts WHERE id = ?", postID)
+	if err != nil {
+		utils.HandleErr(w, err, "Gönderi silinirken hata oluştu.", http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		utils.HandleErr(w, err, "Veritabanı işlemi tamamlanamadı.", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Yönlendirme (Admin Paneline Geri)
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func ReportPostHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Oturum ve Moderatör Kontrolü
+	session, err := datahandlers.GetSession(r)
+	if err != nil || session == nil || !IsModerator(r) {
+		http.Error(w, "Yetkisiz Erişim", http.StatusUnauthorized)
+		return
+	}
+
+	// 2. Form Verilerini Al (post_id, reason)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	postIDStr := r.FormValue("post_id")
+	postID, err := strconv.Atoi(postIDStr)
+	if err != nil {
+		http.Error(w, "Geçersiz gönderi ID'si", http.StatusBadRequest)
+		return
+	}
+
+	// (Rapor nedeni isteğe bağlı olarak alınabilir)
+	reason := r.FormValue("reason")
+
+	// 3. Veritabanına Raporu Kaydet
+	_, err = datahandlers.DB.Exec(
+		"INSERT INTO reports (post_id, moderator_id, reason, status) VALUES (?, ?, ?, 'pending')", // status eklendi
+		postID, session.UserID, reason,
+	)
+	
+
+	if err != nil {
+		utils.HandleErr(w, err, "Rapor kaydedilirken hata oluştu", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Yönlendirme (Moderatör Paneline veya Başarılı Mesaj)
+	http.Redirect(w, r, "/moderatör", http.StatusSeeOther)
+}
+
+func getPostTitleByID(postID int) (string, error) {
+    var title string
+    err := datahandlers.DB.QueryRow("SELECT title FROM posts WHERE id = ? AND deleted = 0", postID).Scan(&title) // Silinmemiş gönderileri kontrol et
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return "", fmt.Errorf("Gönderi bulunamadı veya silinmiş olabilir (ID: %d)", postID)
+        }
+        return "", err
+    }
+    return title, nil
+}
+
+
+func RejectReportHandler(w http.ResponseWriter, r *http.Request) {
+    // 1. Yönetici Oturum Kontrolü
+    session, err := datahandlers.GetSession(r)
+    if err != nil || session == nil || !isAdmin(r) {
+        http.Error(w, "Yetkisiz Erişim", http.StatusUnauthorized)
+        return
+    }
+
+    // 2. Rapor ID'sini Al
+    reportIDStr := r.FormValue("report_id")
+    reportID, err := strconv.Atoi(reportIDStr)
+    if err != nil {
+        http.Error(w, "Geçersiz rapor ID'si.", http.StatusBadRequest)
+        return
+    }
+
+    // 3. Raporu Reddet (Veritabanında Güncelle)
+    _, err = datahandlers.DB.Exec("UPDATE reports SET status = 'rejected' WHERE id = ?", reportID)
+    if err != nil {
+        utils.HandleErr(w, err, "Rapor reddedilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+
+    // 4. Yönlendirme (Admin Paneline Geri)
+    http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+
+// Kategori ekleme işlemi
+// Kategori ekleme işlemi
+func AddCategoryHandler(w http.ResponseWriter, r *http.Request) {
+    // 1. Yöntem Kontrolü
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // 2. Yönetici Yetkilendirme Kontrolü
+    session, err := datahandlers.GetSession(r)
+    if err != nil || session == nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+    if !isAdmin(r) {
+        http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+    }
+
+    // 3. Formdan Kategori Adını Al
+    categoryName := strings.TrimSpace(r.FormValue("categoryName")) // Boşlukları temizle
+    if categoryName == "" {
+        http.Error(w, "Kategori adı boş olamaz", http.StatusBadRequest)
+        return
+    }
+
+    // 4. Veritabanına Ekle (Transaction ile)
+    tx, err := datahandlers.DB.Begin()
+    if err != nil {
+        utils.HandleErr(w, err, "Veritabanı işlemi başlatılamadı", http.StatusInternalServerError)
+        return
+    }
+    defer tx.Rollback() // Hata durumunda işlemi geri al
+
+    _, err = tx.Exec("INSERT INTO categories (name) VALUES (?)", categoryName)
+    if err != nil {
+        tx.Rollback() // Hata durumunda işlemi geri al
+        // Hata kontrolü: Eğer kategori zaten varsa özel bir hata mesajı döndür
+        if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+            http.Error(w, "Bu kategori zaten mevcut", http.StatusBadRequest)
+        } else {
+            utils.HandleErr(w, err, "Kategori eklenirken hata oluştu", http.StatusInternalServerError)
+        }
+        return
+    }
+
+    err = tx.Commit() // İşlemi onayla
+    if err != nil {
+        utils.HandleErr(w, err, "Veritabanı işlemi tamamlanamadı", http.StatusInternalServerError)
+        return
+    }
+
+    // 5. Başarılı Yanıt
+    w.Header().Set("Content-Type", "application/json")
+    response := map[string]interface{}{
+        "success":   true,
+        "message": "Kategori başarıyla eklendi.",
+        "category": categoryName, // Eklenen kategoriyi geri gönder
+    }
+    json.NewEncoder(w).Encode(response)
+}
+// Kategori silme işlemi
+func DeleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    if !isAdmin(r) { // Yönetici kontrolü eklendi
+        http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+    }
+
+    categoryName := r.FormValue("categoryName")
+    if categoryName == "" {
+        http.Error(w, "Category name is required", http.StatusBadRequest)
+        return
+    }
+
+    // Veritabanından silme işlemi (transaction kullanımı)
+    tx, err := datahandlers.DB.Begin()
+    if err != nil {
+        utils.HandleErr(w, err, "Veritabanı işlemi başlatılamadı", http.StatusInternalServerError)
+        return
+    }
+    defer tx.Rollback() // Hata durumunda işlemi geri al
+
+    _, err = tx.Exec("DELETE FROM categories WHERE name = ?", categoryName)
+    if err != nil {
+        tx.Rollback() // Hata durumunda işlemi geri al
+        utils.HandleErr(w, err, "Error deleting category", http.StatusInternalServerError)
+        return
+    }
+
+    err = tx.Commit() // İşlemi onayla
+    if err != nil {
+        utils.HandleErr(w, err, "Veritabanı işlemi tamamlanamadı", http.StatusInternalServerError)
+        return
+    }
+
+    // Başarılı yanıt
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// Kategorileri JSON formatında döndüren işleyici
+func GetCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+    rows, err := datahandlers.DB.Query("SELECT name FROM categories")
+    if err != nil {
+        utils.HandleErr(w, err, "Kategoriler getirilirken hata oluştu.", http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
+
+    var categories []string
+    for rows.Next() {
+        var category string
+        if err := rows.Scan(&category); err != nil {
+            utils.HandleErr(w, err, "Kategori bilgileri okunurken hata oluştu.", http.StatusInternalServerError)
+            return
+        }
+        categories = append(categories, category)
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string][]string{"categories": categories})
 }
